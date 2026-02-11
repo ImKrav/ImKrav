@@ -45,8 +45,8 @@ Estudiante de **Ingeniería de Sistemas** con enfoque en **Desarrollo Web** y **
 
 <div align="center">
 
-<img width="300" height="200" align="center" src="./profile/stats.svg" alt="GitHub Stats" />
-<img width="225" height="200" align="center" src="./profile/top-langs.svg" alt="Top Languages" />
+<img width="370" height="200" align="center" src="./profile/stats.svg" alt="GitHub Stats" />
+<img width="280" height="200" align="center" src="./profile/top-langs.svg" alt="Top Languages" />
 
 </div>
 
