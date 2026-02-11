@@ -13,9 +13,8 @@
 Estudiante de **Ingeniería de Sistemas** con enfoque en **Desarrollo Web** y **DevOps**. Interesado en la construcción de aplicaciones web modernas y escalables.
 
 **Áreas de interés:**
-- Arquitectura de Software
 - Desarrollo Full Stack
-- Diseño UI/UX
+- Arquitectura de Software
 - DevOps
 - RPA
 
