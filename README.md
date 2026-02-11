@@ -35,7 +35,7 @@ Estudiante de **Ingeniería de Sistemas** con enfoque en **Desarrollo Web** y **
 ![Bases de Datos](https://skillicons.dev/icons?i=postgres,mysql,mongodb)
 
 ### Herramientas y Plataformas
-![Herramientas](https://skillicons.dev/icons?i=git,github,nodejs,docker,kubernetes,aws,azure,heroku,vercel,supabase)
+![Herramientas](https://skillicons.dev/icons?i=git,github,nodejs,docker,kubernetes,aws,azure,heroku,vercel,supabase&perline=5)
 
 </div>
 
@@ -45,8 +45,8 @@ Estudiante de **Ingeniería de Sistemas** con enfoque en **Desarrollo Web** y **
 
 <div align="center">
 
-<img height=200 align="center" src="./profile/stats.svg" alt="GitHub Stats" />
-<img height=200 align="center" src="./profile/top-langs.svg" alt="Top Languages" />
+<img width="495" height="200" align="center" src="./profile/stats.svg" alt="GitHub Stats" />
+<img width="350" height="200" align="center" src="./profile/top-langs.svg" alt="Top Languages" />
 
 </div>
 
