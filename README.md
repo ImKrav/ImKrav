@@ -10,7 +10,7 @@
 
 ## Sobre Mí
 
-Estudiante de **Ingeniería de Sistemas** con enfoque en **DevOps** y **Arquitectura de Software**. Interesado en la construcción de aplicaciones web modernas y escalables.
+Estudiante de **Ingeniería de Sistemas** con enfoque en **Arquitectura de Software** y **DevOps**. Interesado en la construcción de aplicaciones web modernas y escalables.
 
 ---
 
