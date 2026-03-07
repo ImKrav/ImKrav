@@ -33,6 +33,15 @@ Estudiante de **Ingeniería de Sistemas** con enfoque en **Arquitectura de Softw
 </div>
 
 ---
+## Actividad de Contribución
+
+<div align="center">
+
+![GitHub Streak](https://streak-stats.demolab.com/?user=ImKrav&theme=tokyonight&hide_border=true&background=0D1117&stroke=3B82F6&ring=3B82F6&fire=F59E0B&currStreakLabel=C9D1D9)
+
+</div>
+
+---
 
 ## Estadísticas de GitHub
 
@@ -45,15 +54,6 @@ Estudiante de **Ingeniería de Sistemas** con enfoque en **Arquitectura de Softw
 
 ---
 
-## Actividad de Contribución
-
-<div align="center">
-
-![GitHub Streak](https://streak-stats.demolab.com/?user=ImKrav&theme=tokyonight&hide_border=true&background=0D1117&stroke=3B82F6&ring=3B82F6&fire=F59E0B&currStreakLabel=C9D1D9)
-
-</div>
-
----
 
 ## Contacto
 
