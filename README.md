@@ -19,7 +19,7 @@ Estudiante de **Ingeniería de Sistemas** con enfoque en **Arquitectura de Softw
 <div align="center">
 
 ### Lenguajes de Programación
-![Lenguajes](https://skillicons.dev/icons?i=html,css,js,ts,python)
+![Lenguajes](https://skillicons.dev/icons?i=js,ts,python)
 
 ### Frameworks y Librerías
 ![Frameworks](https://skillicons.dev/icons?i=react,nextjs,tailwind,nestjs,express)
