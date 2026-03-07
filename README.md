@@ -10,13 +10,7 @@
 
 ## Sobre Mí
 
-Estudiante de **Ingeniería de Sistemas** con enfoque en **Desarrollo Web** y **DevOps**. Interesado en la construcción de aplicaciones web modernas y escalables.
-
-**Áreas de interés:**
-- Desarrollo Full Stack
-- Arquitectura de Software
-- DevOps
-- RPA
+Estudiante de **Ingeniería de Sistemas** con enfoque en **DevOps** y **Arquitectura de Software**. Interesado en la construcción de aplicaciones web modernas y escalables.
 
 ---
 
