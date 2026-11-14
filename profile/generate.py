@@ -26,6 +26,9 @@ SUITE = [  # productos de Nodalix: (nombre, descripción en una línea)
     ("Markio", "Marcación y control de tiempo, multiempresa."),
     ("Nexus", "ERP con módulos propios sobre Odoo 20."),
 ]
+# Organizaciones cuyos repos (también privados) suman a la gráfica de lenguajes. Solo se leen
+# nombres de lenguaje y tamaños; el token necesita acceso a esos repos.
+LANG_ORGS = ["Nodalix-Studio"]
 HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook", "Gherkin"}  # marcado, notebooks y specs de pruebas: no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
@@ -36,7 +39,7 @@ THEMES = {
 
 
 # ── Datos de GitHub ─────────────────────────────────────────────────────────
-def gql(query, variables, token):
+def gql(query, variables, token, strict=True):
     req = urllib.request.Request(
         "https://api.github.com/graphql",
         data=json.dumps({"query": query, "variables": variables}).encode(),
@@ -45,8 +48,10 @@ def gql(query, variables, token):
     with urllib.request.urlopen(req, timeout=30) as r:
         body = json.load(r)
     if body.get("errors"):
-        sys.exit(f"GraphQL error: {body['errors']}")
-    return body["data"]
+        if strict:
+            sys.exit(f"GraphQL error: {body['errors']}")
+        print(f"⚠ GraphQL: {body['errors']}")
+    return body.get("data") or {}
 
 
 def fetch(login, token):
@@ -70,8 +75,16 @@ def fetch(login, token):
         (d["date"], d["contributionCount"])
         for y in years.values() for w in y["contributionCalendar"]["weeks"] for d in w["contributionDays"]
     )
+    repos = list(u["repositories"]["nodes"])
+    for org in LANG_ORGS:
+        o = gql("""query($org:String!){organization(login:$org){repositories(isFork:false,first:100){nodes{
+          languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name color}}}}}}}""",
+                {"org": org}, token, strict=False).get("organization")
+        found = o["repositories"]["nodes"] if o else []
+        print(f"{org}: {len(found)} repos con acceso" + ("" if found else " ⚠ revisa que el token pueda leer la organización"))
+        repos += found
     langs = {}
-    for repo in u["repositories"]["nodes"]:
+    for repo in repos:
         for e in repo["languages"]["edges"]:
             n = e["node"]["name"]
             langs.setdefault(n, [0, e["node"]["color"] or "#8b949e"])[0] += e["size"]
@@ -245,7 +258,7 @@ def render(d, theme="dark", get_icon=icon):
     lw = W - M - lx
     langs = sorted(((n, v) for n, v in d["langs"].items() if n not in HIDDEN_LANGS), key=lambda kv: -kv[1][0])[:6]
     lsum = sum(v[0] for _, v in langs) or 1
-    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes en repositorios públicos</text>')
+    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes en mis repos y los de Nodalix</text>')
     for i, (name, (size, color)) in enumerate(langs):
         p, ry = size / lsum, y + 26 + i * 25
         out.append(f'<text x="{lx}" y="{ry}" class="mono ink">{escape(name)}</text>'
