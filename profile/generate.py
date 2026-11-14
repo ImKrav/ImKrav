@@ -16,10 +16,10 @@ NAME = ("Alejandro", "Bermúdez Bedoya")
 INTRO = ("Estudio Ingeniería de Sistemas. Me interesa cómo se diseña el software por dentro",
          "y cómo llega a producción: arquitectura, contenedores, pipelines y nube.")
 STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
-    ("Código", ["js", "ts", "python"]),
-    ("Frameworks", ["react", "nextjs", "tailwind", "nestjs", "express"]),
+    ("Código", ["js", "ts", "python", "go"]),
+    ("Frameworks", ["nextjs", "tailwind", "nestjs", "fastapi"]),
     ("Datos", ["postgres", "mysql", "mongodb"]),
-    ("Infraestructura y herramientas", ["git", "github", "nodejs", "docker", "kubernetes", "aws", "azure", "heroku", "vercel", "supabase"]),
+    ("Infraestructura y herramientas", ["git", "jenkins", "nodejs", "docker", "aws", "azure", "heroku", "vercel", "dokploy"]),
 ]
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
@@ -111,6 +111,10 @@ def streaks(days):
 
 @functools.cache
 def icon_svg(name, theme):
+    local = HERE / "icons" / f"{name}.svg"  # iconos que skillicons.dev no tiene, en su mismo estilo de baldosa
+    if local.exists():
+        svg = local.read_text().strip()
+        return svg.replace('fill="#242938"', 'fill="#F4F2ED"').replace('fill="#FFFFFF"', 'fill="#242938"') if theme == "light" else svg
     req = urllib.request.Request(f"https://skillicons.dev/icons?i={name}&theme={theme}", headers={"User-Agent": "Mozilla/5.0 profile-svg"})
     with urllib.request.urlopen(req, timeout=30) as r:
         raw = r.read().decode()

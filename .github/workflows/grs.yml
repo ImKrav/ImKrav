@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["profile/generate.py", "profile/fonts/**"]
+    paths: ["profile/generate.py", "profile/fonts/**", "profile/icons/**"]
 
 jobs:
   build:
