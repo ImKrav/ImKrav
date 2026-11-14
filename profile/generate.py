@@ -26,6 +26,9 @@ SUITE = [  # productos de Nodalix: (nombre, descripción en una línea)
     ("Markio", "Marcación y control de tiempo, multiempresa."),
     ("Nexus", "ERP con módulos propios sobre Odoo 20."),
 ]
+# Organizaciones cuyos repos (también privados) suman a la gráfica de lenguajes. Solo se leen
+# nombres de lenguaje y tamaños; el token necesita acceso a esos repos.
+LANG_ORGS = ["Nodalix-Studio"]
 HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook", "Gherkin"}  # marcado, notebooks y specs de pruebas: no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
@@ -36,7 +39,7 @@ THEMES = {
 
 
 # ── Datos de GitHub ─────────────────────────────────────────────────────────
-def gql(query, variables, token):
+def gql(query, variables, token, strict=True):
     req = urllib.request.Request(
         "https://api.github.com/graphql",
         data=json.dumps({"query": query, "variables": variables}).encode(),
@@ -45,15 +48,18 @@ def gql(query, variables, token):
     with urllib.request.urlopen(req, timeout=30) as r:
         body = json.load(r)
     if body.get("errors"):
-        sys.exit(f"GraphQL error: {body['errors']}")
-    return body["data"]
+        if strict:
+            sys.exit(f"GraphQL error: {body['errors']}")
+        print(f"⚠ GraphQL: {body['errors']}")
+    return body.get("data") or {}
 
 
 def fetch(login, token):
     u = gql("""query($login:String!){user(login:$login){
       createdAt followers{totalCount}
       pullRequests{totalCount} issues{totalCount}
-      repositories(ownerAffiliations:OWNER,isFork:false,privacy:PUBLIC,first:100){totalCount nodes{
+      public:repositories(ownerAffiliations:OWNER,isFork:false,privacy:PUBLIC){totalCount}
+      repositories(ownerAffiliations:OWNER,isFork:false,first:100){nodes{
         stargazerCount languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name color}}}}}
       contributionsCollection{totalCommitContributions totalPullRequestReviewContributions}
     }}""", {"login": login}, token)["user"]
@@ -70,8 +76,16 @@ def fetch(login, token):
         (d["date"], d["contributionCount"])
         for y in years.values() for w in y["contributionCalendar"]["weeks"] for d in w["contributionDays"]
     )
+    repos = list(u["repositories"]["nodes"])
+    for org in LANG_ORGS:
+        o = gql("""query($org:String!){organization(login:$org){repositories(isFork:false,first:100){nodes{
+          languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name color}}}}}}}""",
+                {"org": org}, token, strict=False).get("organization")
+        found = o["repositories"]["nodes"] if o else []
+        print(f"{org}: {len(found)} repos con acceso" + ("" if found else " ⚠ revisa que el token pueda leer la organización"))
+        repos += found
     langs = {}
-    for repo in u["repositories"]["nodes"]:
+    for repo in repos:
         for e in repo["languages"]["edges"]:
             n = e["node"]["name"]
             langs.setdefault(n, [0, e["node"]["color"] or "#8b949e"])[0] += e["size"]
@@ -81,7 +95,7 @@ def fetch(login, token):
         "reviews": u["contributionsCollection"]["totalPullRequestReviewContributions"],
         "issues": u["issues"]["totalCount"],
         "stars": sum(r["stargazerCount"] for r in u["repositories"]["nodes"]),
-        "repos": u["repositories"]["totalCount"],
+        "repos": u["public"]["totalCount"],
         "followers": u["followers"]["totalCount"],
         "since": first,
         "days": days,
@@ -225,7 +239,9 @@ def render(d, theme="dark", get_icon=icon):
 
     # Racha: anillo (actual frente a la más larga) y los totales al lado
     y = 806
-    r, rcx, rcy = 46, M + 50, y + 74
+    langs = sorted(((n, v) for n, v in d["langs"].items() if n not in HIDDEN_LANGS), key=lambda kv: -kv[1][0])[:6]
+    # el anillo se centra a la altura de la lista de lenguajes que tiene al lado (filas de 25 px)
+    r, rcx, rcy = 46, M + 50, y + max(72, 25 + (len(langs) - 1) * 12.5)
     circ = 2 * math.pi * r
     pct = cur / best if best else 0
     out.append(f'''
@@ -233,19 +249,18 @@ def render(d, theme="dark", get_icon=icon):
 <circle cx="{rcx}" cy="{rcy}" r="{r}" fill="none" class="track" stroke-width="6"/>
 <circle class="ring" cx="{rcx}" cy="{rcy}" r="{r}" fill="none" stroke-width="6" stroke-linecap="round"
   stroke-dasharray="{circ:.1f}" stroke-dashoffset="{circ * (1 - pct):.1f}" style="--c:{circ:.1f}px" transform="rotate(-90 {rcx} {rcy})"/>
-<text x="{rcx}" y="{rcy + 8}" text-anchor="middle" class="big">{cur}</text>
-<text x="{rcx}" y="{rcy + 26}" text-anchor="middle" class="mono small">{plural(cur, "día", "días")}</text>
-<text x="{M + 122}" y="{rcy - 14}" class="mono">más larga</text>
-<text x="{M + 122}" y="{rcy + 6}" class="body"><tspan class="num">{best}</tspan> {plural(best, "día", "días")} seguidos</text>
-<text x="{M + 122}" y="{rcy + 34}" class="mono">desde {d["since"]}</text>
-<text x="{M + 122}" y="{rcy + 54}" class="body"><tspan class="num">{fmt(sum(c for _, c in days))}</tspan> contribuciones</text>''')
+<text x="{rcx}" y="{rcy + 3}" text-anchor="middle" class="big">{cur}</text>
+<text x="{rcx}" y="{rcy + 19}" text-anchor="middle" class="mono small">{plural(cur, "día", "días")}</text>
+<text x="{M + 124}" y="{rcy - 31}" class="mono">más larga</text>
+<text x="{M + 124}" y="{rcy - 11}" class="body"><tspan class="num">{best}</tspan> {plural(best, "día", "días")} seguidos</text>
+<text x="{M + 124}" y="{rcy + 17}" class="mono">desde {d["since"]}</text>
+<text x="{M + 124}" y="{rcy + 37}" class="body"><tspan class="num">{fmt(sum(c for _, c in days))}</tspan> contribuciones</text>''')
 
     # Lenguajes: una barra por lenguaje, con su color real
     lx = M + 420
     lw = W - M - lx
-    langs = sorted(((n, v) for n, v in d["langs"].items() if n not in HIDDEN_LANGS), key=lambda kv: -kv[1][0])[:6]
     lsum = sum(v[0] for _, v in langs) or 1
-    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes en repositorios públicos</text>')
+    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes</text>')
     for i, (name, (size, color)) in enumerate(langs):
         p, ry = size / lsum, y + 26 + i * 25
         out.append(f'<text x="{lx}" y="{ry}" class="mono ink">{escape(name)}</text>'
