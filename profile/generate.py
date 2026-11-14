@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
-"""Genera profile/profile.svg: el perfil completo como un único SVG animado.
+"""Genera profile/profile-dark.svg y profile/profile-light.svg: el perfil completo como SVG animado.
 
 Uso:
   GH_TOKEN=... USERNAME=ImKrav python3 profile/generate.py   # datos reales (CI)
   python3 profile/generate.py --sample                      # datos de ejemplo (vista previa local)
 """
-import datetime as dt, json, os, random, re, sys, urllib.request
+import base64, datetime as dt, functools, json, math, os, random, re, sys, urllib.request
 from html import escape
 from pathlib import Path
 
-OUT = Path(__file__).with_name("profile.svg")
+HERE = Path(__file__).parent
 
 # ── Contenido personal ──────────────────────────────────────────────────────
-NAME = "Alejandro Bermúdez Bedoya"
-ROLE = "Estudiante de Ingeniería de Sistemas"
-CHIPS = ["Arquitectura de Software", "DevOps", "Apps escalables"]
-STACK = [
-    ("Lenguajes", ["js", "ts", "python"]),
+NAME = ("Alejandro", "Bermúdez Bedoya")
+INTRO = ("Estudio Ingeniería de Sistemas. Me interesa cómo se diseña el software por dentro",
+         "y cómo llega a producción: arquitectura, contenedores, pipelines y nube.")
+STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
+    ("Código", ["js", "ts", "python"]),
     ("Frameworks", ["react", "nextjs", "tailwind", "nestjs", "express"]),
-    ("Bases de datos", ["postgres", "mysql", "mongodb"]),
-    ("Herramientas", ["git", "github", "nodejs", "docker", "kubernetes", "aws", "azure", "heroku", "vercel", "supabase"]),
+    ("Datos", ["postgres", "mysql", "mongodb"]),
+    ("Infraestructura y herramientas", ["git", "github", "nodejs", "docker", "kubernetes", "aws", "azure", "heroku", "vercel", "supabase"]),
 ]
-MONTHS = "Ene Feb Mar Abr May Jun Jul Ago Sep Oct Nov Dic".split()
+MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
+
+THEMES = {
+    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", bar="#4b5562", accent="#f2b13c"),
+    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", bar="#a3acb6", accent="#c47f00"),
+}
+
 
 # ── Datos de GitHub ─────────────────────────────────────────────────────────
 def gql(query, variables, token):
@@ -102,12 +108,17 @@ def streaks(days):
     return current, longest
 
 
-def icon(name, x, y, size, uid):
-    """Incrusta un icono de skillicons.dev como <svg> anidado (GitHub no carga recursos externos)."""
-    req = urllib.request.Request(f"https://skillicons.dev/icons?i={name}", headers={"User-Agent": "Mozilla/5.0 profile-svg"})
+@functools.cache
+def icon_svg(name, theme):
+    req = urllib.request.Request(f"https://skillicons.dev/icons?i={name}&theme={theme}", headers={"User-Agent": "Mozilla/5.0 profile-svg"})
     with urllib.request.urlopen(req, timeout=30) as r:
         raw = r.read().decode()
-    inner = raw[raw.index("<svg", 10): raw.rindex("</g>")].strip()
+    return raw[raw.index("<svg", 10): raw.rindex("</g>")].strip()
+
+
+def icon(name, theme, x, y, size, uid):
+    """Incrusta un icono de skillicons.dev como <svg> anidado (GitHub no carga recursos externos)."""
+    inner = icon_svg(name, theme)
     inner = re.sub(r'id="([^"]+)"', rf'id="{uid}\1"', inner)
     inner = re.sub(r"url\(#([^)]+)\)", rf"url(#{uid}\1)", inner)
     inner = re.sub(r'href="#([^"]+)"', rf'href="#{uid}\1"', inner)
@@ -115,218 +126,130 @@ def icon(name, x, y, size, uid):
     return inner.replace("<svg", f'<svg x="{x}" y="{y}" width="{size}" height="{size}"', 1)
 
 
+@functools.cache
+def font_css():
+    face = lambda fam, file, wt: (f"@font-face{{font-family:'{fam}';font-weight:{wt};src:url(data:font/woff2;base64,"
+                                  f"{base64.b64encode((HERE / 'fonts' / file).read_bytes()).decode()}) format('woff2')}}")
+    return face("Bric", "bric-400.woff2", 400) + face("Bric", "bric-800.woff2", 800) + face("Martian", "martian-400.woff2", 400)
+
+
 # ── Render ──────────────────────────────────────────────────────────────────
-W, PAD = 880, 32
-MONO = "'JetBrains Mono','Fira Code','SF Mono',Consolas,'Liberation Mono',monospace"
-SANS = "'Segoe UI',Inter,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif"
-LEVELS = ["#161e2e", "#123a63", "#1b5fae", "#3b82f6", "#7dd3fc"]
+W, M = 880, 48
 fmt = lambda n: f"{n:,}".replace(",", ".")
+plural = lambda n, one, many: f"{one if n == 1 else many}"
 
 
-def anim(cls, delay, body):
-    return f'<g class="{cls}" style="animation-delay:{delay:.2f}s">{body}</g>'
-
-
-def heading(y, text, delay, right="", line_end=W - PAD):
-    return anim("fade", delay,
-        f'<text x="{PAD}" y="{y}" class="mono h">// {escape(text)}</text>'
-        f'<line x1="{PAD + 30 + len(text) * 7.8:.0f}" y1="{y - 4}" x2="{line_end}" y2="{y - 4}" stroke="#1f2a3d"/>{right}')
-
-
-def panel(x, y, w, h):
-    return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="#0f1524" stroke="#1f2a3d"/>'
-
-
-def render(d, fetch_icon=icon):
+def render(d, theme="dark", get_icon=icon):
+    t = THEMES[theme]
     days = d["days"]
     cur, best = streaks(days)
-    total = sum(c for _, c in days)
-    year_days = days[-371:]
-    year_total = sum(c for _, c in year_days)
     today = dt.date.fromisoformat(days[-1][0]) if days else dt.date.today()
+    year = days[-365:]
+    year_total = sum(c for _, c in year)
     out = []
+    b = lambda n: f'<tspan class="num">{fmt(n)}</tspan>'  # cifra resaltada dentro de una frase
 
-    # Hero ─ ventana de terminal
-    prompt = "whoami"
-    pw = len(prompt) * 9.6
+    # Cabecera: meta, nombre, presentación
     out.append(f'''
-<g class="fade" style="animation-delay:.05s">
-  <circle cx="{PAD + 8}" cy="30" r="6" fill="#ff5f57"/><circle cx="{PAD + 28}" cy="30" r="6" fill="#febc2e"/><circle cx="{PAD + 48}" cy="30" r="6" fill="#28c840"/>
-  <text x="{W / 2}" y="34" text-anchor="middle" class="mono dim" font-size="12">imkrav@github: ~</text>
-  <line x1="0" y1="54" x2="{W}" y2="54" stroke="#1f2a3d"/>
-</g>
-<text x="{PAD + 8}" y="96" class="mono" font-size="16"><tspan fill="#22d3ee">❯</tspan><tspan fill="#64748b"> ~ </tspan></text>
-<clipPath id="typeClip"><rect class="type" x="{PAD + 52}" y="80" width="{pw}" height="22"/></clipPath>
-<text x="{PAD + 52}" y="96" class="mono" font-size="16" fill="#e2e8f0" clip-path="url(#typeClip)">{prompt}</text>
-<rect class="cursor" x="{PAD + 54 + pw}" y="82" width="9" height="18" fill="#22d3ee"/>
-{anim("rise", 1.25, f'<text x="{PAD + 8}" y="150" font-family="{SANS}" font-size="40" font-weight="800" fill="url(#grad)">{escape(NAME)}</text>')}
-{anim("rise", 1.45, f'<text x="{PAD + 8}" y="184" class="mono" font-size="16" fill="#94a3b8">{escape(ROLE)}</text>')}''')
-    x = PAD + 8
-    for i, c in enumerate(CHIPS):
-        w = len(c) * 7.2 + 26
-        out.append(anim("rise", 1.65 + i * 0.12,
-            f'<rect x="{x}" y="204" width="{w}" height="26" rx="13" fill="#3b82f61a" stroke="#3b82f655"/>'
-            f'<text x="{x + w / 2}" y="221" text-anchor="middle" class="mono" font-size="12" fill="#93c5fd">{escape(c)}</text>'))
-        x += w + 10
-    # Decoración: órbitas
-    cx, cy = W - PAD - 80, 142
-    out.append(anim("zoom", 0.6, f'''
-  <circle cx="{cx}" cy="{cy}" r="74" fill="url(#glow)"/>
-  <g class="spin"><circle cx="{cx}" cy="{cy}" r="66" fill="none" stroke="#3b82f6" stroke-opacity=".55" stroke-dasharray="4 10"/><circle cx="{cx + 66}" cy="{cy}" r="4" fill="#22d3ee"/></g>
-  <g class="spin rev"><circle cx="{cx}" cy="{cy}" r="46" fill="none" stroke="#a78bfa" stroke-opacity=".6" stroke-dasharray="30 12"/><circle cx="{cx}" cy="{cy - 46}" r="3.5" fill="#a78bfa"/></g>
-  <circle cx="{cx}" cy="{cy}" r="28" fill="#0f1524" stroke="#1f2a3d"/>
-  <text x="{cx}" y="{cy + 6}" text-anchor="middle" class="mono" font-size="17" font-weight="700" fill="#22d3ee">&lt;/&gt;</text>'''))
+<text x="{M}" y="52" class="mono">@ImKrav</text>
+<text x="{W - M}" y="52" class="mono" text-anchor="end">actualizado {today.day} {MONTHS[today.month - 1]} {today.year}</text>
+<clipPath id="n1"><rect x="0" y="72" width="{W}" height="72"/></clipPath>
+<clipPath id="n2"><rect x="0" y="144" width="{W}" height="64"/></clipPath>
+<g clip-path="url(#n1)"><text x="{M - 4}" y="128" class="name up" style="animation-delay:.1s">{escape(NAME[0])}</text></g>
+<g clip-path="url(#n2)"><text x="{M - 4}" y="192" class="name up" style="animation-delay:.22s">{escape(NAME[1])}</text></g>
+<g class="fade" style="animation-delay:.6s">
+  <text x="{M}" y="238" class="body">{escape(INTRO[0])}</text>
+  <text x="{M}" y="264" class="body">{escape(INTRO[1])}</text>
+</g>''')
 
-    # Estadísticas
-    y0 = 284
-    out.append(heading(y0, "estadísticas", 2.0))
-    cards = [(f"Commits {today.year}", d["commits"], "#3b82f6"), ("Pull Requests", d["prs"], "#a78bfa"),
-             ("Issues", d["issues"], "#22d3ee"), ("Estrellas", d["stars"], "#f59e0b"),
-             ("Repositorios", d["repos"], "#34d399"), ("Seguidores", d["followers"], "#f472b6")]
-    cw = (W - 2 * PAD - 5 * 12) / 6
-    for i, (label, val, color) in enumerate(cards):
-        x = PAD + i * (cw + 12)
-        out.append(anim("rise", 2.1 + i * 0.09,
-            panel(x, y0 + 16, cw, 84) +
-            f'<rect x="{x + 16}" y="{y0 + 16}" width="{cw - 32}" height="2" rx="1" fill="{color}"/>'
-            f'<text x="{x + cw / 2}" y="{y0 + 62}" text-anchor="middle" font-family="{SANS}" font-size="26" font-weight="700" fill="#f1f5f9">{fmt(val)}</text>'
-            f'<text x="{x + cw / 2}" y="{y0 + 84}" text-anchor="middle" class="mono dim" font-size="11">{escape(label)}</text>'))
+    # Firma: la traza del año, un día por barra. La racha actual va en el color de acento.
+    top, base, tw = 340, 450, W - 2 * M
+    pitch = tw / 365
+    mx = max((c for _, c in year), default=0) or 1
+    streak_from = len(year) - cur - (1 if year and year[-1][1] == 0 else 0)
+    bars = []
+    for i, (date, c) in enumerate(year):
+        h = 2 if not c else max(4, math.sqrt(c / mx) * (base - top))
+        cls = "acc" if c and i >= streak_from else ("bar" if c else "zero")
+        bars.append(f'<rect class="{cls}" x="{M + i * pitch:.2f}" y="{base - h:.1f}" width="{pitch * .62:.2f}" height="{h:.1f}"/>')
+    months = []
+    for i, (date, _) in enumerate(year):
+        day = dt.date.fromisoformat(date)
+        if day.day == 1 and i < len(year) - 12:
+            months.append(f'<text x="{M + i * pitch:.1f}" y="{base + 22}" class="mono">{MONTHS[day.month - 1]}</text>')
+    out.append(f'''
+<text x="{M}" y="{top - 18}" class="mono">Contribuciones, últimos 12 meses</text>
+<text x="{W - M}" y="{top - 18}" class="mono ink" text-anchor="end">{fmt(year_total)} en total · racha actual <tspan class="acc-t">{cur} {plural(cur, "día", "días")}</tspan></text>
+<clipPath id="sweep"><rect class="sweep" x="{M}" y="{top - 4}" width="{tw}" height="{base - top + 8}"/></clipPath>
+<g clip-path="url(#sweep)">{"".join(bars)}</g>
+<rect class="head" x="{M}" y="{top - 6}" width="1.5" height="{base - top + 10}"/>
+<rect x="{M}" y="{base + 1}" width="{tw}" height="1" class="rule"/>
+{"".join(months)}''')
 
-    # Racha + lenguajes
-    y1 = 420
-    lx, lw = PAD, 392
-    out.append(heading(y1, "racha", 2.6, line_end=lx + lw))
-    out.append(anim("rise", 2.7, panel(lx, y1 + 16, lw, 184)))
-    r, rcx, rcy = 44, lx + lw / 2, y1 + 98
-    circ = 2 * 3.14159 * r
-    pct = cur / best if best else 0
-    out.append(anim("fade", 2.8, f'''
-  <circle cx="{rcx}" cy="{rcy}" r="{r}" fill="none" stroke="#1f2a3d" stroke-width="8"/>
-  <circle class="ring" cx="{rcx}" cy="{rcy}" r="{r}" fill="none" stroke="url(#grad)" stroke-width="8" stroke-linecap="round"
-    stroke-dasharray="{circ:.1f}" stroke-dashoffset="{circ * (1 - pct):.1f}" style="--c:{circ:.1f}px" transform="rotate(-90 {rcx} {rcy})"/>
-  <text x="{rcx}" y="{rcy + 10}" text-anchor="middle" font-family="{SANS}" font-size="28" font-weight="800" fill="#f1f5f9">{cur}</text>
-  <text x="{rcx}" y="{rcy + 72}" text-anchor="middle" class="mono" font-size="12" fill="#22d3ee">Racha actual</text>'''))
-    for i, (val, label, sub) in enumerate([(fmt(total), "Contribuciones", f"desde {d['since']}"), (fmt(best), "Racha más larga", "días seguidos")]):
-        sx = lx + (68 if i == 0 else lw - 68)
-        out.append(anim("rise", 2.95 + i * 0.1,
-            f'<text x="{sx}" y="{y1 + 104}" text-anchor="middle" font-family="{SANS}" font-size="24" font-weight="700" fill="#f1f5f9">{val}</text>'
-            f'<text x="{sx}" y="{y1 + 128}" text-anchor="middle" class="mono" font-size="11" fill="#cbd5e1">{label}</text>'
-            f'<text x="{sx}" y="{y1 + 146}" text-anchor="middle" class="mono dim" font-size="10">{sub}</text>'))
+    # Los números, dichos en una frase
+    y = 524
+    lines = [
+        f'Este año: {b(d["commits"])} commits. En total, {b(d["prs"])} pull requests y {b(d["issues"])} issues.',
+        f'Racha actual de {b(cur)} {plural(cur, "día", "días")}; la más larga, {b(best)}. Contribuyendo desde {d["since"]}.',
+        f'{b(d["repos"])} {plural(d["repos"], "repositorio público", "repositorios públicos")}, '
+        f'{b(d["stars"])} {plural(d["stars"], "estrella", "estrellas")} y {b(d["followers"])} {plural(d["followers"], "seguidor", "seguidores")}.',
+    ]
+    out += [f'<text x="{M}" y="{y + i * 32}" class="say">{s}</text>' for i, s in enumerate(lines)]
 
-    gx, gw = PAD + lw + 16, W - 2 * PAD - lw - 16
-    out.append(anim("fade", 2.6, f'<text x="{gx}" y="{y1}" class="mono h">// lenguajes</text>'
-                                 f'<line x1="{gx + 120}" y1="{y1 - 4}" x2="{W - PAD}" y2="{y1 - 4}" stroke="#1f2a3d"/>'))
-    out.append(anim("rise", 2.75, panel(gx, y1 + 16, gw, 184)))
+    # Lenguajes: una barra segmentada con sus colores reales
+    y = 640
     langs = sorted(d["langs"].items(), key=lambda kv: -kv[1][0])[:6]
     lsum = sum(v[0] for _, v in langs) or 1
+    segs, legend, x = [], [], M
     for i, (name, (size, color)) in enumerate(langs):
-        p, ry = size / lsum * 100, y1 + 44 + i * 27
-        out.append(anim("fade", 2.9 + i * 0.08,
-            f'<text x="{gx + 20}" y="{ry}" class="mono" font-size="12" fill="#cbd5e1">{escape(name)}</text>'
-            f'<text x="{gx + gw - 20}" y="{ry}" text-anchor="end" class="mono dim" font-size="11">{p:.1f}%</text>'
-            f'<rect x="{gx + 20}" y="{ry + 6}" width="{gw - 40}" height="6" rx="3" fill="#1a2233"/>'
-            f'<rect class="bar" style="animation-delay:{3.0 + i * 0.08:.2f}s" x="{gx + 20}" y="{ry + 6}" width="{max((gw - 40) * p / 100, 6):.1f}" height="6" rx="3" fill="{color}"/>'))
+        w = tw * size / lsum
+        segs.append(f'<rect class="seg" style="animation-delay:{2.5 + i * .09:.2f}s" x="{x:.1f}" y="{y + 14}" width="{max(w - 2, 1):.1f}" height="8" fill="{color}"/>')
+        legend.append(f'<tspan fill="{color}" font-weight="800">— </tspan><tspan class="ink-t">{escape(name)}</tspan> {size / lsum * 100:.0f}%{"   " if i < len(langs) - 1 else ""}')
+        x += w
+    out.append(f'<text x="{M}" y="{y}" class="mono">Lenguajes en repositorios públicos</text>'
+               f'<clipPath id="lbar"><rect x="{M}" y="{y + 14}" width="{tw}" height="8" rx="4"/></clipPath>'
+               f'<g clip-path="url(#lbar)">{"".join(segs)}</g>'
+               f'<text x="{M}" y="{y + 48}" class="mono" xml:space="preserve">{"".join(legend)}</text>')
 
-    # Mapa de contribuciones
-    y2 = 660
-    cell, gap = 11, 3
-    legend_x = W - PAD - 5 * (cell + gap) - 30
-    legend = (f'<text x="{legend_x - 8}" y="{y2}" text-anchor="end" class="mono dim" font-size="10">Menos</text>' +
-              "".join(f'<rect x="{legend_x + i * (cell + gap)}" y="{y2 - 10}" width="{cell}" height="{cell}" rx="2" fill="{c}"/>' for i, c in enumerate(LEVELS)) +
-              f'<text x="{legend_x + 5 * (cell + gap) + 4}" y="{y2}" class="mono dim" font-size="10">Más</text>')
-    out.append(heading(y2, f"actividad · {fmt(year_total)} contribuciones en el último año", 3.3, legend, legend_x - 56))
-    out.append(anim("fade", 3.35, panel(PAD, y2 + 16, W - 2 * PAD, 150)))
-    start = today - dt.timedelta(52 * 7 + (today.weekday() + 1) % 7)  # domingo, 53 columnas, como GitHub
-    by_date = dict(year_days)
-    mx = max(by_date.values(), default=0) or 1
-    hx, hy = PAD + 54, y2 + 52
-    for wd, lab in ((1, "Lun"), (3, "Mié"), (5, "Vie")):
-        out.append(anim("fade", 3.4, f'<text x="{hx - 10}" y="{hy + wd * (cell + gap) + 9}" text-anchor="end" class="mono dim" font-size="9">{lab}</text>'))
-    last_month = None
-    for col in range(53):
-        cells = []
-        for row in range(7):
-            day = start + dt.timedelta(col * 7 + row)
-            if day > today:
-                break
-            c = by_date.get(day.isoformat(), 0)
-            lvl = 0 if not c else min(4, 1 + int(4 * c / (mx + 1)))
-            cells.append(f'<rect x="{hx + col * (cell + gap)}" y="{hy + row * (cell + gap)}" width="{cell}" height="{cell}" rx="2" fill="{LEVELS[lvl]}"/>')
-        top = start + dt.timedelta(col * 7)
-        if top.month != last_month and col < 51:
-            if last_month is not None or top.day <= 7:
-                cells.append(f'<text x="{hx + col * (cell + gap)}" y="{hy - 9}" class="mono dim" font-size="9">{MONTHS[top.month - 1]}</text>')
-            last_month = top.month
-        out.append(anim("pop", 3.45 + col * 0.018, "".join(cells)))
-
-    # Stack
-    y3 = 856
-    out.append(heading(y3, "stack & herramientas", 4.3))
-    out.append(anim("fade", 4.35, panel(PAD, y3 + 16, W - 2 * PAD, 4 * 50 + 22)))
-    n = 0
-    for i, (cat, icons) in enumerate(STACK):
-        ry = y3 + 38 + i * 50
-        out.append(anim("fade", 4.4 + i * 0.1, f'<text x="{PAD + 22}" y="{ry + 24}" class="mono" font-size="12" fill="#94a3b8">{cat}</text>'))
-        for j, name in enumerate(icons):
-            out.append(anim("pop", 4.5 + n * 0.045, fetch_icon(name, PAD + 170 + j * 50, ry, 38, f"i{n}_")))
+    # Stack: iconos reales, sin animación; el hueco entre iconos se calcula para llegar justo al margen derecho
+    y, size, group_gap, n, x = 746, 30, 26, 0, M
+    count = sum(len(icons) for _, icons in STACK)
+    gap = (tw - count * size - (len(STACK) - 1) * group_gap) / (count - len(STACK))
+    for group, icons in STACK:
+        out.append(f'<text x="{x:.1f}" y="{y}" class="mono">{escape(group)}</text>')
+        for name in icons:
+            out.append(get_icon(name, theme, round(x, 1), y + 12, size, f"i{n}_"))
+            x += size + gap
             n += 1
-
-    # Footer
-    y4 = y3 + 4 * 50 + 74
-    msg = f" actualizado {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC · auto-generado con GitHub Actions"
-    out.append(anim("fade", 5.4,
-        f'<text x="{PAD + 8}" y="{y4}" class="mono" font-size="12"><tspan fill="#22d3ee">❯</tspan><tspan fill="#64748b">{msg}</tspan></text>'
-        f'<rect class="blink" x="{PAD + 8 + (len(msg) + 2) * 7.2:.0f}" y="{y4 - 11}" width="7" height="14" fill="#22d3ee"/>'))
-    H = y4 + 28
+        x += group_gap - gap
+    H = y + 76
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t d">
-<title id="t">{escape(NAME)} · GitHub</title>
-<desc id="d">{escape(ROLE)}. {fmt(total)} contribuciones, racha actual de {cur} días, {d["repos"]} repositorios públicos.</desc>
-<defs>
-  <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0" spreadMethod="reflect">
-    <stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/>
-    <animateTransform attributeName="gradientTransform" type="translate" values="0 0;1 0;0 0" dur="8s" repeatCount="indefinite"/>
-  </linearGradient>
-  <radialGradient id="glow"><stop offset="0" stop-color="#3b82f6" stop-opacity=".35"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
-  <radialGradient id="orbA"><stop offset="0" stop-color="#2563eb" stop-opacity=".22"/><stop offset="1" stop-color="#2563eb" stop-opacity="0"/></radialGradient>
-  <radialGradient id="orbB"><stop offset="0" stop-color="#7c3aed" stop-opacity=".16"/><stop offset="1" stop-color="#7c3aed" stop-opacity="0"/></radialGradient>
-  <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".035"/></pattern>
-  <clipPath id="frame"><rect width="{W}" height="{H}" rx="16"/></clipPath>
-</defs>
+<title id="t">{escape(" ".join(NAME))}</title>
+<desc id="d">{escape(" ".join(INTRO))} {fmt(year_total)} contribuciones en los últimos 12 meses, racha actual de {cur} días.</desc>
 <style>
-  .mono{{font-family:{MONO}}} .dim{{fill:#64748b}} .h{{font-size:13px;fill:#22d3ee;letter-spacing:.5px}}
-  .fade,.rise,.pop,.zoom{{animation-duration:.7s;animation-timing-function:cubic-bezier(.2,.75,.25,1);animation-fill-mode:both}}
-  .fade{{animation-name:fade}} .rise{{animation-name:rise}} .pop{{animation-name:pop;animation-duration:.5s}} .zoom{{animation-name:zoom;animation-duration:1.1s}}
-  .pop,.zoom,.spin{{transform-box:fill-box;transform-origin:center}}
-  .bar,.type{{transform-box:fill-box;transform-origin:left center}}
-  .type{{animation:type .7s steps(6) .45s both}}
-  .cursor{{animation:slide .7s steps(6) .45s both,blink 1s step-end 1.15s infinite}}
-  .blink{{animation:blink 1s step-end infinite}}
-  .bar{{animation:grow 1.1s cubic-bezier(.2,.75,.25,1) both}}
-  .ring{{animation:ring 1.6s cubic-bezier(.2,.75,.25,1) 2.9s both}}
-  .spin{{animation:spin 24s linear infinite}} .rev{{animation-direction:reverse;animation-duration:16s}}
-  .orb{{animation:float 12s ease-in-out infinite alternate}} .orb2{{animation-duration:15s;animation-delay:-5s}}
+  {font_css()}
+  text{{fill:{t["muted"]}}}
+  .name{{font:800 64px Bric,'Segoe UI',system-ui,sans-serif;letter-spacing:-1.6px;fill:{t["ink"]}}}
+  .body{{font:400 17px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["muted"]}}}
+  .say{{font:400 19px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["muted"]}}}
+  .num{{font-weight:800;fill:{t["ink"]}}}
+  .mono{{font:400 11px Martian,ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.2px}}
+  .ink,.ink-t{{fill:{t["ink"]}}} .acc-t{{fill:{t["accent"]}}}
+  .bar{{fill:{t["bar"]}}} .zero,.rule{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
+  .up{{animation:up .9s cubic-bezier(.16,1,.3,1) both}}
+  .fade{{animation:fade .8s ease-out both}}
+  .sweep{{transform-box:fill-box;transform-origin:left;animation:sweep 1.8s cubic-bezier(.65,0,.35,1) .85s both}}
+  .head{{opacity:0;animation:head 1.8s cubic-bezier(.65,0,.35,1) .85s both}}
+  .seg{{transform-box:fill-box;transform-origin:left;animation:sweep .7s cubic-bezier(.16,1,.3,1) both}}
+  @keyframes up{{from{{transform:translateY(72px)}}}}
   @keyframes fade{{from{{opacity:0}}}}
-  @keyframes rise{{from{{opacity:0;transform:translateY(14px)}}}}
-  @keyframes pop{{from{{opacity:0;transform:scale(.3)}}}}
-  @keyframes zoom{{from{{opacity:0;transform:scale(.6) rotate(-30deg)}}}}
-  @keyframes type{{from{{transform:scaleX(0)}}}}
-  @keyframes slide{{from{{transform:translateX(-{pw:.1f}px)}}}}
-  @keyframes grow{{from{{transform:scaleX(0)}}}}
-  @keyframes ring{{from{{stroke-dashoffset:var(--c)}}}}
-  @keyframes blink{{50%{{opacity:0}}}}
-  @keyframes spin{{to{{transform:rotate(360deg)}}}}
-  @keyframes float{{to{{transform:translate(60px,40px)}}}}
+  @keyframes sweep{{from{{transform:scaleX(0)}}}}
+  @keyframes head{{0%{{opacity:1;transform:translateX(0)}}92%{{opacity:1}}100%{{opacity:0;transform:translateX({tw}px)}}}}
   @media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}
 </style>
-<g clip-path="url(#frame)">
-  <rect width="{W}" height="{H}" fill="#0a0e17"/>
-  <rect width="{W}" height="{H}" fill="url(#grid)"/>
-  <circle class="orb" cx="140" cy="120" r="320" fill="url(#orbA)"/>
-  <circle class="orb orb2" cx="{W - 120}" cy="{H - 260}" r="360" fill="url(#orbB)"/>
-  {"".join(out)}
-</g>
-<rect x=".5" y=".5" width="{W - 1}" height="{H - 1}" rx="16" fill="none" stroke="#1f2a3d"/>
+<rect x=".5" y=".5" width="{W - 1}" height="{H - 1}" rx="14" fill="{t["bg"]}" stroke="{t["edge"]}"/>
+{"".join(out)}
 </svg>
 '''
 
@@ -345,5 +268,7 @@ if __name__ == "__main__":
     else:
         token = os.environ.get("GH_TOKEN") or sys.exit("Falta GH_TOKEN")
         data = fetch(os.environ.get("USERNAME", "ImKrav"), token)
-    OUT.write_text(render(data), encoding="utf-8")
-    print(f"✔ {OUT}")
+    for theme in THEMES:
+        path = HERE / f"profile-{theme}.svg"
+        path.write_text(render(data, theme), encoding="utf-8")
+        print(f"✔ {path}")
