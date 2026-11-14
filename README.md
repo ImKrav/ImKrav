@@ -1,67 +1,8 @@
 <div align="center">
-  
-# Alejandro Bermúdez Bedoya
 
-### Estudiante de Ingeniería de Sistemas
-
-</div>
-
----
-
-## Sobre Mí
-
-Estudiante de **Ingeniería de Sistemas** con enfoque en **Arquitectura de Software** y **DevOps**. Interesado en la construcción de aplicaciones modernas, robustas y escalables.
-
----
-
-## Tecnologías y Herramientas
-
-<div align="center">
-
-### Lenguajes de Programación
-![Lenguajes](https://skillicons.dev/icons?i=js,ts,python)
-
-### Frameworks y Librerías
-![Frameworks](https://skillicons.dev/icons?i=react,nextjs,tailwind,nestjs,express)
-
-### Bases de Datos
-![Bases de Datos](https://skillicons.dev/icons?i=postgres,mysql,mongodb)
-
-### Herramientas y Plataformas
-![Herramientas](https://skillicons.dev/icons?i=git,github,nodejs,docker,kubernetes,aws,azure,heroku,vercel,supabase&perline=5)
-
-</div>
-
----
-## Actividad de Contribución
-
-<div align="center">
-
-![GitHub Streak](https://streak-stats.demolab.com/?user=ImKrav&theme=tokyonight&hide_border=true&background=0D1117&stroke=3B82F6&ring=3B82F6&fire=F59E0B&currStreakLabel=C9D1D9)
-
-</div>
-
----
-
-## Estadísticas de GitHub
-
-<div align="center">
-
-<img width="370" height="200" align="center" src="./profile/stats.svg" alt="GitHub Stats" />
-<img width="280" height="200" align="center" src="./profile/top-langs.svg" alt="Top Languages" />
-
-</div>
-
----
-
-
-## Contacto
-
-<div align="center">
+<img src="./profile/profile.svg" width="100%" alt="Alejandro Bermúdez Bedoya — Estudiante de Ingeniería de Sistemas enfocado en Arquitectura de Software y DevOps. Estadísticas de GitHub, racha de contribuciones, lenguajes más usados, mapa de actividad y stack tecnológico (JavaScript, TypeScript, Python, React, Next.js, NestJS, PostgreSQL, Docker, Kubernetes, AWS, Azure y más)." />
 
 [![LinkedIn](https://skillicons.dev/icons?i=linkedin)](https://www.linkedin.com/in/alejandro-bermudez-bedoya-780254356/)
 [![Gmail](https://skillicons.dev/icons?i=gmail)](mailto:alejandrobb599@gmail.com)
-
-</div>
 
 </div>
