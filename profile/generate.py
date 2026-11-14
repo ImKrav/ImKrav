@@ -13,7 +13,7 @@ HERE = Path(__file__).parent
 
 # ── Contenido personal ──────────────────────────────────────────────────────
 NAME = ("Alejandro", "Bermúdez Bedoya")
-INTRO = ("Estudio Ingeniería de Sistemas. Me interesa la arquitectura de software: dónde trazar",
+INTRO = ("Estudio Ingeniería de Sistemas. Me enfoco en la arquitectura de software: dónde trazar",
          "los límites de un sistema, cómo se comunican sus partes y qué decisiones aguantan el cambio.")
 STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
     ("Código", ["js", "ts", "go", "python"]),
