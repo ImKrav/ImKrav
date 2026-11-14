@@ -21,10 +21,10 @@ STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a mar
     ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
-STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Arquitectura de software y orquestación de sistemas, desde Medellín.")
-SUITE = [  # (nombre, descripción en dos líneas, stack o estado)
-    ("Markio", ("Sistema de marcación y control de tiempo,", "multiempresa, para empresas en Colombia."), "NestJS · Next.js · PostgreSQL"),
-    ("Nexus", ("El ERP de Nodalix: módulos propios", "sobre Odoo Community 20."), "Python · Odoo · Docker"),
+STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Empresa de arquitectura de software y orquestación de sistemas, en Medellín.")
+SUITE = [  # productos de Nodalix: (nombre, descripción en una línea, stack)
+    ("Markio", "Marcación y control de tiempo, multiempresa.", "NestJS · Next.js · PostgreSQL"),
+    ("Nexus", "ERP con módulos propios sobre Odoo 20.", "Python · Odoo · Docker"),
 ]
 HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook", "Gherkin"}  # marcado, notebooks y specs de pruebas: no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
@@ -207,32 +207,28 @@ def render(d, theme="dark", get_icon=icon):
 <g clip-path="url(#sweep)">{"".join(cells)}</g>
 <rect class="head" x="{gx - 2}" y="{top - 6}" width="1.5" height="{gh + 10}"/>''')
 
-    # Proyectos: Nodalix arriba y su suite debajo, unidas como un hub con sus ramas
-    y = 512
-    out.append(f'<text x="{M}" y="{y - 14}" class="mono">Proyectos</text>')
+    # Proyectos: Nodalix es el contenedor; sus productos van dentro, más pequeños
+    y, ph, pad = 512, 234, 20
     name, url, role, about = STUDIO
-    out.append(f'<rect x="{M}" y="{y}" width="{tw}" height="92" rx="12" class="tile"/>'
-               f'<text x="{M + 20}" y="{y + 50}" class="big">{escape(name)}</text>'
-               f'<text x="{M + 20}" y="{y + 74}" class="body">{escape(about)}</text>'
-               f'<text x="{W - M - 20}" y="{y + 44}" class="mono acc-t" text-anchor="end">{escape(url)}</text>'
-               f'<text x="{W - M - 20}" y="{y + 64}" class="mono" text-anchor="end">{escape(role)}</text>')
-    sy, sh, gap = y + 92 + 28, 120, 12
-    n_suite = len(SUITE)
-    sw = (tw - (n_suite - 1) * gap) / n_suite
-    centers = [M + i * (sw + gap) + sw / 2 for i in range(n_suite)]
-    bus = y + 92 + 14
-    path = f"M{W / 2} {y + 92}V{bus}M{centers[0]:.1f} {bus}H{centers[-1]:.1f}" + "".join(f"M{c:.1f} {bus}V{sy}" for c in centers)
-    out.append(f'<path class="wire" d="{path}" pathLength="1"/>'
-               + "".join(f'<circle class="node" style="animation-delay:{2.7 + i * .1:.2f}s" cx="{c:.1f}" cy="{bus}" r="3"/>' for i, c in enumerate(centers)))
-    for i, (pname, lines, tags) in enumerate(SUITE):
-        x = M + i * (sw + gap)
-        out.append(f'<rect x="{x:.1f}" y="{sy}" width="{sw:.1f}" height="{sh}" rx="12" class="tile"/>'
-                   f'<text x="{x + 18:.1f}" y="{sy + 34}" class="pname">{escape(pname)}</text>'
-                   + "".join(f'<text x="{x + 18:.1f}" y="{sy + 58 + k * 18}" class="desc">{escape(l)}</text>' for k, l in enumerate(lines))
-                   + f'<text x="{x + 18:.1f}" y="{sy + sh - 16}" class="mono small">{escape(tags)}</text>')
+    out.append(f'<text x="{M}" y="{y - 14}" class="mono">Proyectos</text>'
+               f'<rect x="{M}" y="{y}" width="{tw}" height="{ph}" rx="14" class="tile"/>'
+               f'<text x="{M + pad}" y="{y + 56}" class="studio">{escape(name)}</text>'
+               f'<text x="{M + pad}" y="{y + 86}" class="body">{escape(about)}</text>'
+               f'<text x="{W - M - pad}" y="{y + 40}" class="mono acc-t" text-anchor="end">{escape(url)}</text>'
+               f'<text x="{W - M - pad}" y="{y + 60}" class="mono" text-anchor="end">{escape(role)}</text>'
+               f'<text x="{M + pad}" y="{y + 126}" class="mono">Productos</text>')
+    gap, sy, sh = 12, y + 138, 76
+    sw = (tw - 2 * pad - (len(SUITE) - 1) * gap) / len(SUITE)
+    for i, (pname, desc, tags) in enumerate(SUITE):
+        x = M + pad + i * (sw + gap)
+        out.append(f'<rect x="{x:.1f}" y="{sy}" width="{sw:.1f}" height="{sh}" rx="10" class="inset"/>'
+                   f'<circle class="node" style="animation-delay:{2.3 + i * .12:.2f}s" cx="{x + 20:.1f}" cy="{sy + 23}" r="3.5"/>'
+                   f'<text x="{x + 32:.1f}" y="{sy + 29}" class="pname">{escape(pname)}</text>'
+                   f'<text x="{x + sw - 16:.1f}" y="{sy + 28}" class="mono small" text-anchor="end">{escape(tags)}</text>'
+                   f'<text x="{x + 16:.1f}" y="{sy + 56}" class="desc">{escape(desc)}</text>')
 
     # Racha: anillo (actual frente a la más larga) y los totales al lado
-    y = 812
+    y = 806
     r, rcx, rcy = 46, M + 50, y + 74
     circ = 2 * math.pi * r
     pct = cur / best if best else 0
@@ -262,7 +258,7 @@ def render(d, theme="dark", get_icon=icon):
                    f'<rect class="seg" style="animation-delay:{2.7 + i * .08:.2f}s" x="{lx}" y="{ry + 6}" width="{max(lw * p, 4):.1f}" height="4" rx="2" fill="{color}"/>')
 
     # Stack: iconos reales, sin animación; el hueco entre iconos se calcula para llegar justo al margen derecho
-    y, size, group_gap, n, x = 1020, 30, 26, 0, M
+    y, size, group_gap, n, x = 1014, 30, 26, 0, M
     count = sum(len(icons) for _, icons in STACK)
     gap = (tw - count * size - (len(STACK) - 1) * group_gap) / (count - len(STACK))
     for group, icons in STACK:
@@ -290,9 +286,10 @@ def render(d, theme="dark", get_icon=icon):
   .track{{stroke:{t["faint"]}}} .ring{{stroke:{t["accent"]};animation:ring 1.6s cubic-bezier(.16,1,.3,1) 2.6s both}}
   .big{{font:800 30px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}} .small{{font-size:9px}} .xl{{font-size:44px}}
   .tile{{fill:{t["tile"]};stroke:{t["edge"]}}}
-  .pname{{font:800 20px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}}
+  .studio{{font:800 44px Bric,'Segoe UI',system-ui,sans-serif;letter-spacing:-1px;fill:{t["ink"]}}}
+  .inset{{fill:{t["bg"]};stroke:{t["edge"]}}}
+  .pname{{font:800 18px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}}
   .desc{{font:400 14px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["muted"]}}}
-  .wire{{fill:none;stroke:{t["bar"]};stroke-width:1.5;stroke-dasharray:1;animation:draw 1.2s cubic-bezier(.65,0,.35,1) 2s both}}
   .node{{fill:{t["accent"]};transform-box:fill-box;transform-origin:center;animation:pop .5s cubic-bezier(.16,1,.3,1) both}}
   .up{{animation:up .9s cubic-bezier(.16,1,.3,1) both}}
   .fade{{animation:fade .8s ease-out both}}
@@ -303,7 +300,6 @@ def render(d, theme="dark", get_icon=icon):
   @keyframes fade{{from{{opacity:0}}}}
   @keyframes ring{{from{{stroke-dashoffset:var(--c)}}}}
   @keyframes sweep{{from{{transform:scaleX(0)}}}}
-  @keyframes draw{{from{{stroke-dashoffset:1}}}}
   @keyframes pop{{from{{transform:scale(0)}}}}
   @keyframes head{{0%{{opacity:1;transform:translateX(0)}}92%{{opacity:1}}100%{{opacity:0;transform:translateX({tw - 28}px)}}}}
   @media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}
