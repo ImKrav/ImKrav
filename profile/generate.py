@@ -21,6 +21,7 @@ STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a mar
     ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
+HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook"}  # marcado y notebooks: pesan mucho y no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
 THEMES = {
@@ -249,7 +250,7 @@ def render(d, theme="dark", get_icon=icon):
     # Lenguajes: una barra por lenguaje, con su color real
     lx = M + 420
     lw = W - M - lx
-    langs = sorted(d["langs"].items(), key=lambda kv: -kv[1][0])[:6]
+    langs = sorted(((n, v) for n, v in d["langs"].items() if n not in HIDDEN_LANGS), key=lambda kv: -kv[1][0])[:6]
     lsum = sum(v[0] for _, v in langs) or 1
     out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes en repositorios públicos</text>')
     for i, (name, (size, color)) in enumerate(langs):
