@@ -1,67 +1,11 @@
 <div align="center">
-  
-# Alejandro Bermúdez Bedoya
 
-### Estudiante de Ingeniería de Sistemas
-
-</div>
-
----
-
-## Sobre Mí
-
-Estudiante de **Ingeniería de Sistemas** con enfoque en **Arquitectura de Software** y **DevOps**. Interesado en la construcción de aplicaciones modernas, robustas y escalables.
-
----
-
-## Tecnologías y Herramientas
-
-<div align="center">
-
-### Lenguajes de Programación
-![Lenguajes](https://skillicons.dev/icons?i=js,ts,python)
-
-### Frameworks y Librerías
-![Frameworks](https://skillicons.dev/icons?i=react,nextjs,tailwind,nestjs,express)
-
-### Bases de Datos
-![Bases de Datos](https://skillicons.dev/icons?i=postgres,mysql,mongodb)
-
-### Herramientas y Plataformas
-![Herramientas](https://skillicons.dev/icons?i=git,github,nodejs,docker,kubernetes,aws,azure,heroku,vercel,supabase&perline=5)
-
-</div>
-
----
-## Actividad de Contribución
-
-<div align="center">
-
-![GitHub Streak](https://streak-stats.demolab.com/?user=ImKrav&theme=tokyonight&hide_border=true&background=0D1117&stroke=3B82F6&ring=3B82F6&fire=F59E0B&currStreakLabel=C9D1D9)
-
-</div>
-
----
-
-## Estadísticas de GitHub
-
-<div align="center">
-
-<img width="370" height="200" align="center" src="./profile/stats.svg" alt="GitHub Stats" />
-<img width="280" height="200" align="center" src="./profile/top-langs.svg" alt="Top Languages" />
-
-</div>
-
----
-
-
-## Contacto
-
-<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./profile/profile-dark.svg" />
+  <img src="./profile/profile-light.svg" width="100%" alt="Alejandro Bermúdez Bedoya. Estudio Ingeniería de Sistemas; me interesa cómo se diseña el software por dentro y cómo llega a producción: arquitectura, contenedores, pipelines y nube. Incluye mis contribuciones de los últimos 12 meses, racha, commits, pull requests, lenguajes y stack (JavaScript, TypeScript, Go, Python, Next.js, Angular, NestJS, Django, PostgreSQL, Redis, MongoDB, Docker, Jenkins, AWS, Azure, Google Cloud, Dokploy y más)." />
+</picture>
 
 [![LinkedIn](https://skillicons.dev/icons?i=linkedin)](https://www.linkedin.com/in/alejandro-bermudez-bedoya-780254356/)
 [![Gmail](https://skillicons.dev/icons?i=gmail)](mailto:alejandrobb599@gmail.com)
-
-</div>
 
 </div>
