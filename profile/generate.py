@@ -13,20 +13,25 @@ HERE = Path(__file__).parent
 
 # ── Contenido personal ──────────────────────────────────────────────────────
 NAME = ("Alejandro", "Bermúdez Bedoya")
-INTRO = ("Estudio Ingeniería de Sistemas. Me interesa cómo se diseña el software por dentro",
-         "y cómo llega a producción: arquitectura, contenedores, pipelines y nube.")
+INTRO = ("Estudio Ingeniería de Sistemas. Me enfoco en la arquitectura de software: dónde trazar",
+         "los límites de un sistema, cómo se comunican sus partes y qué decisiones aguantan el cambio.")
 STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
     ("Código", ["js", "ts", "go", "python"]),
     ("Frameworks", ["nextjs", "angular", "nestjs", "django"]),
     ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
+STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Empresa de consultoría de software y orquestación de sistemas.")
+SUITE = [  # productos de Nodalix: (nombre, descripción en una línea)
+    ("Markio", "Marcación y control de tiempo, multiempresa."),
+    ("Nexus", "ERP con módulos propios sobre Odoo 20."),
+]
 HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook", "Gherkin"}  # marcado, notebooks y specs de pruebas: no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
 THEMES = {
-    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", tile="#141a21", bar="#4b5562", accent="#f2b13c"),
-    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", tile="#ffffff", bar="#a3acb6", accent="#c47f00"),
+    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", tile="#141a21", accent="#f2b13c"),
+    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", tile="#ffffff", accent="#c47f00"),
 }
 
 
@@ -167,15 +172,11 @@ def render(d, theme="dark", get_icon=icon):
   <text x="{M}" y="264" class="body">{escape(INTRO[1])}</text>
 </g>''')
 
-    # Actividad: el mapa del año. Lo revela un barrido; los días de la racha actual van en el color de acento.
+    # Actividad: el mapa del año, en ámbar por intensidad. Lo revela un barrido.
     tw, top = W - 2 * M, 352
     gx, pitch, cell = M + 30, (tw - 30) / 53, 11
     by_date = dict(year)
     mx = max(by_date.values(), default=0) or 1
-    streak_days, day = set(), today - dt.timedelta(1 if by_date.get(today.isoformat(), 0) == 0 else 0)
-    while len(streak_days) < cur:
-        streak_days.add(day.isoformat())
-        day -= dt.timedelta(1)
     start = today - dt.timedelta(52 * 7 + (today.weekday() + 1) % 7)  # domingo, 53 columnas, como GitHub
     cells, months, last_month = [], [], None
     for col in range(53):
@@ -189,8 +190,9 @@ def render(d, theme="dark", get_icon=icon):
             if day > today:
                 break
             c = by_date.get(day.isoformat(), 0)
-            cls = "acc" if day.isoformat() in streak_days else ("bar" if c else "zero")
-            op = f' fill-opacity="{.3 + .7 * math.sqrt(c / mx):.2f}"' if c and cls == "bar" else ""
+            cls = "acc" if c else "zero"
+            # cuatro niveles; el más bajo (40 %) sigue distinguiéndose de un día vacío
+            op = f' fill-opacity="{(.4, .6, .8, 1)[min(3, math.ceil(4 * math.sqrt(c / mx)) - 1)]}"' if c else ""
             cells.append(f'<rect class="{cls}" x="{gx + col * pitch:.1f}" y="{top + row * pitch:.1f}" width="{cell}" height="{cell}" rx="2"{op}/>')
     gh = 7 * pitch
     out.append(f'''
@@ -202,36 +204,27 @@ def render(d, theme="dark", get_icon=icon):
 <g clip-path="url(#sweep)">{"".join(cells)}</g>
 <rect class="head" x="{gx - 2}" y="{top - 6}" width="1.5" height="{gh + 10}"/>''')
 
-    # Estadísticas: commits del año con su gráfica mensual, y el resto en una cuadrícula de 3×2
-    y, gap, bh = 512, 12, 180
-    out.append(f'<text x="{M}" y="{y - 14}" class="mono">Estadísticas</text>')
-    bw = 284
-    months_back = [((today.month - 1 - k) % 12 + 1, today.year - (k >= today.month)) for k in range(11, -1, -1)]  # (mes, año), del más viejo al actual
-    per_month = [sum(c for dd, c in year if dd[:7] == f"{yy}-{mm:02d}") for mm, yy in months_back]
-    pm_max = max(per_month) or 1
-    cx0, cw, chart_top, chart_base = M + 18, (bw - 36) / 12, y + 98, y + bh - 26
-    cols = []
-    for i, ((mm, _), v) in enumerate(zip(months_back, per_month)):
-        h = max(2, (chart_base - chart_top) * v / pm_max)
-        cols.append(f'<rect class="{"acc" if i == 11 else "bar"} col" style="animation-delay:{2.1 + i * .05:.2f}s" x="{cx0 + i * cw + 2:.1f}" y="{chart_base - h:.1f}" width="{cw - 5:.1f}" height="{h:.1f}" rx="2"/>'
-                    f'<text x="{cx0 + i * cw + cw / 2 - 1.5:.1f}" y="{chart_base + 14}" text-anchor="middle" class="mono small">{MONTHS[mm - 1][0]}</text>')
-    out.append(f'''<rect x="{M}" y="{y}" width="{bw}" height="{bh}" rx="12" class="tile"/>
-<text x="{M + 18}" y="{y + 28}" class="mono">Commits en {today.year}</text>
-<text x="{M + bw - 18}" y="{y + 76}" class="mono small" text-anchor="end">contribuciones por mes</text>
-<text x="{M + 16}" y="{y + 76}" class="big xl">{fmt(d["commits"])}</text>
-{"".join(cols)}''')
-    sx0 = M + bw + gap
-    sw, sh = (tw - bw - gap - 2 * gap) / 3, (bh - gap) / 2
-    small = [("Pull requests", d["prs"]), ("Issues", d["issues"]), ("Revisiones", d["reviews"]),
-             ("Repositorios", d["repos"]), ("Estrellas", d["stars"]), ("Seguidores", d["followers"])]
-    for i, (label, val) in enumerate(small):
-        x, ty = sx0 + (i % 3) * (sw + gap), y + (i // 3) * (sh + gap)
-        out.append(f'<rect x="{x:.1f}" y="{ty:.1f}" width="{sw:.1f}" height="{sh:.1f}" rx="12" class="tile"/>'
-                   f'<text x="{x + 16:.1f}" y="{ty + 26:.1f}" class="mono">{label}</text>'
-                   f'<text x="{x + 15:.1f}" y="{ty + 68:.1f}" class="big">{fmt(val)}</text>')
+    # Proyectos: Nodalix es el contenedor; sus productos van dentro, más pequeños
+    y, ph, pad = 512, 234, 20
+    name, url, role, about = STUDIO
+    out.append(f'<text x="{M}" y="{y - 14}" class="mono">Proyectos</text>'
+               f'<rect x="{M}" y="{y}" width="{tw}" height="{ph}" rx="14" class="tile"/>'
+               f'<text x="{M + pad}" y="{y + 56}" class="studio">{escape(name)}</text>'
+               f'<text x="{M + pad}" y="{y + 86}" class="body">{escape(about)}</text>'
+               f'<text x="{W - M - pad}" y="{y + 40}" class="mono acc-t" text-anchor="end">{escape(url)}</text>'
+               f'<text x="{W - M - pad}" y="{y + 60}" class="mono" text-anchor="end">{escape(role)}</text>'
+               f'<text x="{M + pad}" y="{y + 126}" class="mono">Productos</text>')
+    gap, sy, sh = 12, y + 138, 76
+    sw = (tw - 2 * pad - (len(SUITE) - 1) * gap) / len(SUITE)
+    for i, (pname, desc) in enumerate(SUITE):
+        x = M + pad + i * (sw + gap)
+        out.append(f'<rect x="{x:.1f}" y="{sy}" width="{sw:.1f}" height="{sh}" rx="10" class="inset"/>'
+                   f'<circle class="node" style="animation-delay:{2.3 + i * .12:.2f}s" cx="{x + 20:.1f}" cy="{sy + 23}" r="3.5"/>'
+                   f'<text x="{x + 32:.1f}" y="{sy + 29}" class="pname">{escape(pname)}</text>'
+                   f'<text x="{x + 16:.1f}" y="{sy + 56}" class="desc">{escape(desc)}</text>')
 
     # Racha: anillo (actual frente a la más larga) y los totales al lado
-    y = 752
+    y = 806
     r, rcx, rcy = 46, M + 50, y + 74
     circ = 2 * math.pi * r
     pct = cur / best if best else 0
@@ -261,7 +254,7 @@ def render(d, theme="dark", get_icon=icon):
                    f'<rect class="seg" style="animation-delay:{2.7 + i * .08:.2f}s" x="{lx}" y="{ry + 6}" width="{max(lw * p, 4):.1f}" height="4" rx="2" fill="{color}"/>')
 
     # Stack: iconos reales, sin animación; el hueco entre iconos se calcula para llegar justo al margen derecho
-    y, size, group_gap, n, x = 960, 30, 26, 0, M
+    y, size, group_gap, n, x = 1014, 30, 26, 0, M
     count = sum(len(icons) for _, icons in STACK)
     gap = (tw - count * size - (len(STACK) - 1) * group_gap) / (count - len(STACK))
     for group, icons in STACK:
@@ -285,11 +278,15 @@ def render(d, theme="dark", get_icon=icon):
   .num{{font-weight:800;fill:{t["ink"]}}}
   .mono{{font:400 11px Martian,ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.2px}}
   .ink,.ink-t{{fill:{t["ink"]}}} .acc-t{{fill:{t["accent"]}}}
-  .bar{{fill:{t["bar"]}}} .zero{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
+  .zero{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
   .track{{stroke:{t["faint"]}}} .ring{{stroke:{t["accent"]};animation:ring 1.6s cubic-bezier(.16,1,.3,1) 2.6s both}}
   .big{{font:800 30px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}} .small{{font-size:9px}} .xl{{font-size:44px}}
   .tile{{fill:{t["tile"]};stroke:{t["edge"]}}}
-  .col{{transform-box:fill-box;transform-origin:bottom;animation:grow .9s cubic-bezier(.16,1,.3,1) both}}
+  .studio{{font:800 44px Bric,'Segoe UI',system-ui,sans-serif;letter-spacing:-1px;fill:{t["ink"]}}}
+  .inset{{fill:{t["bg"]};stroke:{t["edge"]}}}
+  .pname{{font:800 18px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}}
+  .desc{{font:400 14px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["muted"]}}}
+  .node{{fill:{t["accent"]};transform-box:fill-box;transform-origin:center;animation:pop .5s cubic-bezier(.16,1,.3,1) both}}
   .up{{animation:up .9s cubic-bezier(.16,1,.3,1) both}}
   .fade{{animation:fade .8s ease-out both}}
   .sweep{{transform-box:fill-box;transform-origin:left;animation:sweep 1.8s cubic-bezier(.65,0,.35,1) .85s both}}
@@ -299,7 +296,7 @@ def render(d, theme="dark", get_icon=icon):
   @keyframes fade{{from{{opacity:0}}}}
   @keyframes ring{{from{{stroke-dashoffset:var(--c)}}}}
   @keyframes sweep{{from{{transform:scaleX(0)}}}}
-  @keyframes grow{{from{{transform:scaleY(0)}}}}
+  @keyframes pop{{from{{transform:scale(0)}}}}
   @keyframes head{{0%{{opacity:1;transform:translateX(0)}}92%{{opacity:1}}100%{{opacity:0;transform:translateX({tw - 28}px)}}}}
   @media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}
 </style>
