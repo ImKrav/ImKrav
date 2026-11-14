@@ -17,7 +17,7 @@ INTRO = ("Estudio Ingeniería de Sistemas. Me interesa cómo se diseña el softw
          "y cómo llega a producción: arquitectura, contenedores, pipelines y nube.")
 STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
     ("Código", ["js", "ts", "go", "python"]),
-    ("Frameworks", ["nextjs", "tailwind", "nestjs", "fastapi"]),
+    ("Frameworks", ["nextjs", "angular", "nestjs", "fastapi"]),
     ("Datos", ["postgres", "mysql", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
