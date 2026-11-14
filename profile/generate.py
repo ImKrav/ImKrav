@@ -13,15 +13,15 @@ HERE = Path(__file__).parent
 
 # ── Contenido personal ──────────────────────────────────────────────────────
 NAME = ("Alejandro", "Bermúdez Bedoya")
-INTRO = ("Estudio Ingeniería de Sistemas. Me interesa cómo se diseña el software por dentro",
-         "y cómo llega a producción: arquitectura, contenedores, pipelines y nube.")
+INTRO = ("Estudio Ingeniería de Sistemas. Me interesa la arquitectura de software: dónde trazar",
+         "los límites de un sistema, cómo se comunican sus partes y qué decisiones aguantan el cambio.")
 STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
     ("Código", ["js", "ts", "go", "python"]),
     ("Frameworks", ["nextjs", "angular", "nestjs", "django"]),
     ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
-STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Empresa de arquitectura de software y orquestación de sistemas.")
+STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Empresa de consultoría de software y orquestación de sistemas.")
 SUITE = [  # productos de Nodalix: (nombre, descripción en una línea)
     ("Markio", "Marcación y control de tiempo, multiempresa."),
     ("Nexus", "ERP con módulos propios sobre Odoo 20."),
