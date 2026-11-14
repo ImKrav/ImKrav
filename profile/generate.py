@@ -260,7 +260,7 @@ def render(d, theme="dark", get_icon=icon):
     lx = M + 420
     lw = W - M - lx
     lsum = sum(v[0] for _, v in langs) or 1
-    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes en mis repos y los de Nodalix</text>')
+    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes</text>')
     for i, (name, (size, color)) in enumerate(langs):
         p, ry = size / lsum, y + 26 + i * 25
         out.append(f'<text x="{lx}" y="{ry}" class="mono ink">{escape(name)}</text>'
