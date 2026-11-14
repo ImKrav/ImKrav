@@ -21,7 +21,7 @@ STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a mar
     ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
-HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook"}  # marcado y notebooks: pesan mucho y no son el stack
+HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook", "Gherkin"}  # marcado, notebooks y specs de pruebas: no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
 THEMES = {
