@@ -21,17 +21,17 @@ STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a mar
     ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
-STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Empresa de arquitectura de software y orquestación de sistemas, en Medellín.")
-SUITE = [  # productos de Nodalix: (nombre, descripción en una línea, stack)
-    ("Markio", "Marcación y control de tiempo, multiempresa.", "NestJS · Next.js · PostgreSQL"),
-    ("Nexus", "ERP con módulos propios sobre Odoo 20.", "Python · Odoo · Docker"),
+STUDIO = ("Nodalix", "nodalix.tech", "fundador", "Empresa de arquitectura de software y orquestación de sistemas.")
+SUITE = [  # productos de Nodalix: (nombre, descripción en una línea)
+    ("Markio", "Marcación y control de tiempo, multiempresa."),
+    ("Nexus", "ERP con módulos propios sobre Odoo 20."),
 ]
 HIDDEN_LANGS = {"HTML", "CSS", "Jupyter Notebook", "Gherkin"}  # marcado, notebooks y specs de pruebas: no son el stack
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
 THEMES = {
-    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", tile="#141a21", bar="#4b5562", accent="#f2b13c"),
-    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", tile="#ffffff", bar="#a3acb6", accent="#c47f00"),
+    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", tile="#141a21", accent="#f2b13c"),
+    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", tile="#ffffff", accent="#c47f00"),
 }
 
 
@@ -172,15 +172,11 @@ def render(d, theme="dark", get_icon=icon):
   <text x="{M}" y="264" class="body">{escape(INTRO[1])}</text>
 </g>''')
 
-    # Actividad: el mapa del año. Lo revela un barrido; los días de la racha actual van en el color de acento.
+    # Actividad: el mapa del año, en ámbar por intensidad. Lo revela un barrido.
     tw, top = W - 2 * M, 352
     gx, pitch, cell = M + 30, (tw - 30) / 53, 11
     by_date = dict(year)
     mx = max(by_date.values(), default=0) or 1
-    streak_days, day = set(), today - dt.timedelta(1 if by_date.get(today.isoformat(), 0) == 0 else 0)
-    while len(streak_days) < cur:
-        streak_days.add(day.isoformat())
-        day -= dt.timedelta(1)
     start = today - dt.timedelta(52 * 7 + (today.weekday() + 1) % 7)  # domingo, 53 columnas, como GitHub
     cells, months, last_month = [], [], None
     for col in range(53):
@@ -194,8 +190,9 @@ def render(d, theme="dark", get_icon=icon):
             if day > today:
                 break
             c = by_date.get(day.isoformat(), 0)
-            cls = "acc" if day.isoformat() in streak_days else ("bar" if c else "zero")
-            op = f' fill-opacity="{.3 + .7 * math.sqrt(c / mx):.2f}"' if c and cls == "bar" else ""
+            cls = "acc" if c else "zero"
+            # cuatro niveles; el más bajo (40 %) sigue distinguiéndose de un día vacío
+            op = f' fill-opacity="{(.4, .6, .8, 1)[min(3, math.ceil(4 * math.sqrt(c / mx)) - 1)]}"' if c else ""
             cells.append(f'<rect class="{cls}" x="{gx + col * pitch:.1f}" y="{top + row * pitch:.1f}" width="{cell}" height="{cell}" rx="2"{op}/>')
     gh = 7 * pitch
     out.append(f'''
@@ -219,12 +216,11 @@ def render(d, theme="dark", get_icon=icon):
                f'<text x="{M + pad}" y="{y + 126}" class="mono">Productos</text>')
     gap, sy, sh = 12, y + 138, 76
     sw = (tw - 2 * pad - (len(SUITE) - 1) * gap) / len(SUITE)
-    for i, (pname, desc, tags) in enumerate(SUITE):
+    for i, (pname, desc) in enumerate(SUITE):
         x = M + pad + i * (sw + gap)
         out.append(f'<rect x="{x:.1f}" y="{sy}" width="{sw:.1f}" height="{sh}" rx="10" class="inset"/>'
                    f'<circle class="node" style="animation-delay:{2.3 + i * .12:.2f}s" cx="{x + 20:.1f}" cy="{sy + 23}" r="3.5"/>'
                    f'<text x="{x + 32:.1f}" y="{sy + 29}" class="pname">{escape(pname)}</text>'
-                   f'<text x="{x + sw - 16:.1f}" y="{sy + 28}" class="mono small" text-anchor="end">{escape(tags)}</text>'
                    f'<text x="{x + 16:.1f}" y="{sy + 56}" class="desc">{escape(desc)}</text>')
 
     # Racha: anillo (actual frente a la más larga) y los totales al lado
@@ -282,7 +278,7 @@ def render(d, theme="dark", get_icon=icon):
   .num{{font-weight:800;fill:{t["ink"]}}}
   .mono{{font:400 11px Martian,ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.2px}}
   .ink,.ink-t{{fill:{t["ink"]}}} .acc-t{{fill:{t["accent"]}}}
-  .bar{{fill:{t["bar"]}}} .zero{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
+  .zero{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
   .track{{stroke:{t["faint"]}}} .ring{{stroke:{t["accent"]};animation:ring 1.6s cubic-bezier(.16,1,.3,1) 2.6s both}}
   .big{{font:800 30px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}} .small{{font-size:9px}} .xl{{font-size:44px}}
   .tile{{fill:{t["tile"]};stroke:{t["edge"]}}}
