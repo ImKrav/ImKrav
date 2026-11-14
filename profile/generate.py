@@ -19,7 +19,7 @@ STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a mar
     ("Código", ["js", "ts", "python", "go"]),
     ("Frameworks", ["nextjs", "tailwind", "nestjs", "fastapi"]),
     ("Datos", ["postgres", "mysql", "mongodb"]),
-    ("Infraestructura y herramientas", ["git", "jenkins", "nodejs", "docker", "aws", "azure", "heroku", "vercel", "dokploy"]),
+    ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
