@@ -162,57 +162,82 @@ def render(d, theme="dark", get_icon=icon):
   <text x="{M}" y="264" class="body">{escape(INTRO[1])}</text>
 </g>''')
 
-    # Firma: la traza del año, un día por barra. La racha actual va en el color de acento.
-    top, base, tw = 340, 450, W - 2 * M
-    pitch = tw / 365
-    mx = max((c for _, c in year), default=0) or 1
-    streak_from = len(year) - cur - (1 if year and year[-1][1] == 0 else 0)
-    bars = []
-    for i, (date, c) in enumerate(year):
-        h = 2 if not c else max(4, math.sqrt(c / mx) * (base - top))
-        cls = "acc" if c and i >= streak_from else ("bar" if c else "zero")
-        bars.append(f'<rect class="{cls}" x="{M + i * pitch:.2f}" y="{base - h:.1f}" width="{pitch * .62:.2f}" height="{h:.1f}"/>')
-    months = []
-    for i, (date, _) in enumerate(year):
-        day = dt.date.fromisoformat(date)
-        if day.day == 1 and i < len(year) - 12:
-            months.append(f'<text x="{M + i * pitch:.1f}" y="{base + 22}" class="mono">{MONTHS[day.month - 1]}</text>')
+    # Actividad: el mapa del año. Lo revela un barrido; los días de la racha actual van en el color de acento.
+    tw, top = W - 2 * M, 352
+    gx, pitch, cell = M + 30, (tw - 30) / 53, 11
+    by_date = dict(year)
+    mx = max(by_date.values(), default=0) or 1
+    streak_days, day = set(), today - dt.timedelta(1 if by_date.get(today.isoformat(), 0) == 0 else 0)
+    while len(streak_days) < cur:
+        streak_days.add(day.isoformat())
+        day -= dt.timedelta(1)
+    start = today - dt.timedelta(52 * 7 + (today.weekday() + 1) % 7)  # domingo, 53 columnas, como GitHub
+    cells, months, last_month = [], [], None
+    for col in range(53):
+        first = start + dt.timedelta(col * 7)
+        if first.month != last_month and col < 51:
+            if last_month is not None or first.day <= 7:
+                months.append(f'<text x="{gx + col * pitch:.1f}" y="{top - 10}" class="mono">{MONTHS[first.month - 1]}</text>')
+            last_month = first.month
+        for row in range(7):
+            day = first + dt.timedelta(row)
+            if day > today:
+                break
+            c = by_date.get(day.isoformat(), 0)
+            cls = "acc" if day.isoformat() in streak_days else ("bar" if c else "zero")
+            op = f' fill-opacity="{.3 + .7 * math.sqrt(c / mx):.2f}"' if c and cls == "bar" else ""
+            cells.append(f'<rect class="{cls}" x="{gx + col * pitch:.1f}" y="{top + row * pitch:.1f}" width="{cell}" height="{cell}" rx="2"{op}/>')
+    gh = 7 * pitch
     out.append(f'''
-<text x="{M}" y="{top - 18}" class="mono">Contribuciones, últimos 12 meses</text>
-<text x="{W - M}" y="{top - 18}" class="mono ink" text-anchor="end">{fmt(year_total)} en total · racha actual <tspan class="acc-t">{cur} {plural(cur, "día", "días")}</tspan></text>
-<clipPath id="sweep"><rect class="sweep" x="{M}" y="{top - 4}" width="{tw}" height="{base - top + 8}"/></clipPath>
-<g clip-path="url(#sweep)">{"".join(bars)}</g>
-<rect class="head" x="{M}" y="{top - 6}" width="1.5" height="{base - top + 10}"/>
-<rect x="{M}" y="{base + 1}" width="{tw}" height="1" class="rule"/>
-{"".join(months)}''')
+<text x="{M}" y="{top - 36}" class="mono">Actividad, últimos 12 meses</text>
+<text x="{W - M}" y="{top - 36}" class="mono ink" text-anchor="end">{fmt(year_total)} contribuciones</text>
+{"".join(months)}
+{"".join(f'<text x="{M}" y="{top + r * pitch + 9:.1f}" class="mono small">{lab}</text>' for r, lab in ((1, "lun"), (3, "mié"), (5, "vie")))}
+<clipPath id="sweep"><rect class="sweep" x="{gx - 2}" y="{top - 2}" width="{tw - 28}" height="{gh + 4}"/></clipPath>
+<g clip-path="url(#sweep)">{"".join(cells)}</g>
+<rect class="head" x="{gx - 2}" y="{top - 6}" width="1.5" height="{gh + 10}"/>''')
 
     # Los números, dichos en una frase
-    y = 524
+    y = 506
     lines = [
         f'Este año: {b(d["commits"])} commits. En total, {b(d["prs"])} pull requests y {b(d["issues"])} issues.',
-        f'Racha actual de {b(cur)} {plural(cur, "día", "días")}; la más larga, {b(best)}. Contribuyendo desde {d["since"]}.',
         f'{b(d["repos"])} {plural(d["repos"], "repositorio público", "repositorios públicos")}, '
         f'{b(d["stars"])} {plural(d["stars"], "estrella", "estrellas")} y {b(d["followers"])} {plural(d["followers"], "seguidor", "seguidores")}.',
     ]
     out += [f'<text x="{M}" y="{y + i * 32}" class="say">{s}</text>' for i, s in enumerate(lines)]
 
-    # Lenguajes: una barra segmentada con sus colores reales
-    y = 640
+    # Racha: anillo (actual frente a la más larga) y los totales al lado
+    y = 600
+    r, rcx, rcy = 46, M + 50, y + 74
+    circ = 2 * math.pi * r
+    pct = cur / best if best else 0
+    out.append(f'''
+<text x="{M}" y="{y}" class="mono">Racha</text>
+<circle cx="{rcx}" cy="{rcy}" r="{r}" fill="none" class="track" stroke-width="6"/>
+<circle class="ring" cx="{rcx}" cy="{rcy}" r="{r}" fill="none" stroke-width="6" stroke-linecap="round"
+  stroke-dasharray="{circ:.1f}" stroke-dashoffset="{circ * (1 - pct):.1f}" style="--c:{circ:.1f}px" transform="rotate(-90 {rcx} {rcy})"/>
+<text x="{rcx}" y="{rcy + 8}" text-anchor="middle" class="big">{cur}</text>
+<text x="{rcx}" y="{rcy + 26}" text-anchor="middle" class="mono small">{plural(cur, "día", "días")}</text>
+<text x="{M + 122}" y="{rcy - 14}" class="mono">más larga</text>
+<text x="{M + 122}" y="{rcy + 6}" class="body"><tspan class="num">{best}</tspan> {plural(best, "día", "días")} seguidos</text>
+<text x="{M + 122}" y="{rcy + 34}" class="mono">desde {d["since"]}</text>
+<text x="{M + 122}" y="{rcy + 54}" class="body"><tspan class="num">{fmt(sum(c for _, c in days))}</tspan> contribuciones</text>''')
+
+    # Lenguajes: una barra por lenguaje, con su color real
+    lx = M + 420
+    lw = W - M - lx
     langs = sorted(d["langs"].items(), key=lambda kv: -kv[1][0])[:6]
     lsum = sum(v[0] for _, v in langs) or 1
-    segs, legend, x = [], [], M
+    out.append(f'<text x="{lx}" y="{y}" class="mono">Lenguajes en repositorios públicos</text>')
     for i, (name, (size, color)) in enumerate(langs):
-        w = tw * size / lsum
-        segs.append(f'<rect class="seg" style="animation-delay:{2.5 + i * .09:.2f}s" x="{x:.1f}" y="{y + 14}" width="{max(w - 2, 1):.1f}" height="8" fill="{color}"/>')
-        legend.append(f'<tspan fill="{color}" font-weight="800">— </tspan><tspan class="ink-t">{escape(name)}</tspan> {size / lsum * 100:.0f}%{"   " if i < len(langs) - 1 else ""}')
-        x += w
-    out.append(f'<text x="{M}" y="{y}" class="mono">Lenguajes en repositorios públicos</text>'
-               f'<clipPath id="lbar"><rect x="{M}" y="{y + 14}" width="{tw}" height="8" rx="4"/></clipPath>'
-               f'<g clip-path="url(#lbar)">{"".join(segs)}</g>'
-               f'<text x="{M}" y="{y + 48}" class="mono" xml:space="preserve">{"".join(legend)}</text>')
+        p, ry = size / lsum, y + 26 + i * 25
+        out.append(f'<text x="{lx}" y="{ry}" class="mono ink">{escape(name)}</text>'
+                   f'<text x="{W - M}" y="{ry}" class="mono" text-anchor="end">{p * 100:.1f}%</text>'
+                   f'<rect x="{lx}" y="{ry + 6}" width="{lw}" height="4" rx="2" class="zero"/>'
+                   f'<rect class="seg" style="animation-delay:{2.7 + i * .08:.2f}s" x="{lx}" y="{ry + 6}" width="{max(lw * p, 4):.1f}" height="4" rx="2" fill="{color}"/>')
 
     # Stack: iconos reales, sin animación; el hueco entre iconos se calcula para llegar justo al margen derecho
-    y, size, group_gap, n, x = 746, 30, 26, 0, M
+    y, size, group_gap, n, x = 808, 30, 26, 0, M
     count = sum(len(icons) for _, icons in STACK)
     gap = (tw - count * size - (len(STACK) - 1) * group_gap) / (count - len(STACK))
     for group, icons in STACK:
@@ -236,16 +261,19 @@ def render(d, theme="dark", get_icon=icon):
   .num{{font-weight:800;fill:{t["ink"]}}}
   .mono{{font:400 11px Martian,ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:.2px}}
   .ink,.ink-t{{fill:{t["ink"]}}} .acc-t{{fill:{t["accent"]}}}
-  .bar{{fill:{t["bar"]}}} .zero,.rule{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
+  .bar{{fill:{t["bar"]}}} .zero{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
+  .track{{stroke:{t["faint"]}}} .ring{{stroke:{t["accent"]};animation:ring 1.6s cubic-bezier(.16,1,.3,1) 2.6s both}}
+  .big{{font:800 30px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}} .small{{font-size:9px}}
   .up{{animation:up .9s cubic-bezier(.16,1,.3,1) both}}
   .fade{{animation:fade .8s ease-out both}}
   .sweep{{transform-box:fill-box;transform-origin:left;animation:sweep 1.8s cubic-bezier(.65,0,.35,1) .85s both}}
   .head{{opacity:0;animation:head 1.8s cubic-bezier(.65,0,.35,1) .85s both}}
-  .seg{{transform-box:fill-box;transform-origin:left;animation:sweep .7s cubic-bezier(.16,1,.3,1) both}}
+  .seg{{transform-box:fill-box;transform-origin:left;animation:sweep 1s cubic-bezier(.16,1,.3,1) both}}
   @keyframes up{{from{{transform:translateY(72px)}}}}
   @keyframes fade{{from{{opacity:0}}}}
+  @keyframes ring{{from{{stroke-dashoffset:var(--c)}}}}
   @keyframes sweep{{from{{transform:scaleX(0)}}}}
-  @keyframes head{{0%{{opacity:1;transform:translateX(0)}}92%{{opacity:1}}100%{{opacity:0;transform:translateX({tw}px)}}}}
+  @keyframes head{{0%{{opacity:1;transform:translateX(0)}}92%{{opacity:1}}100%{{opacity:0;transform:translateX({tw - 28}px)}}}}
   @media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}
 </style>
 <rect x=".5" y=".5" width="{W - 1}" height="{H - 1}" rx="14" fill="{t["bg"]}" stroke="{t["edge"]}"/>
