@@ -24,8 +24,8 @@ STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a mar
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
 
 THEMES = {
-    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", bar="#4b5562", accent="#f2b13c"),
-    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", bar="#a3acb6", accent="#c47f00"),
+    "dark": dict(bg="#0f1318", edge="#1e252e", ink="#e8ecf0", muted="#8c96a2", faint="#262d36", tile="#141a21", bar="#4b5562", accent="#f2b13c"),
+    "light": dict(bg="#f7f8fa", edge="#e1e5ea", ink="#12161b", muted="#5d6773", faint="#dce1e6", tile="#ffffff", bar="#a3acb6", accent="#c47f00"),
 }
 
 
@@ -49,7 +49,7 @@ def fetch(login, token):
       pullRequests{totalCount} issues{totalCount}
       repositories(ownerAffiliations:OWNER,isFork:false,privacy:PUBLIC,first:100){totalCount nodes{
         stargazerCount languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name color}}}}}
-      contributionsCollection{totalCommitContributions}
+      contributionsCollection{totalCommitContributions totalPullRequestReviewContributions}
     }}""", {"login": login}, token)["user"]
 
     # Calendario año por año desde la creación de la cuenta → totales y rachas históricas.
@@ -72,6 +72,7 @@ def fetch(login, token):
     return {
         "commits": u["contributionsCollection"]["totalCommitContributions"],
         "prs": u["pullRequests"]["totalCount"],
+        "reviews": u["contributionsCollection"]["totalPullRequestReviewContributions"],
         "issues": u["issues"]["totalCount"],
         "stars": sum(r["stargazerCount"] for r in u["repositories"]["nodes"]),
         "repos": u["repositories"]["totalCount"],
@@ -86,7 +87,7 @@ def sample():
     rnd, today = random.Random(7), dt.date.today()
     days = [((today - dt.timedelta(d)).isoformat(), rnd.choice([0, 0, 1, 2, 3, 5, 8, 12])) for d in range(730, -1, -1)]
     days[-6:] = [(d, c or 2) for d, c in days[-6:]]
-    return {"commits": 642, "prs": 38, "issues": 17, "stars": 24, "repos": 21, "followers": 15, "since": 2023, "days": days,
+    return {"commits": 642, "prs": 38, "reviews": 12, "issues": 17, "stars": 24, "repos": 21, "followers": 15, "since": 2023, "days": days,
             "langs": {"TypeScript": [52000, "#3178c6"], "JavaScript": [31000, "#f1e05a"], "Python": [18000, "#3572A5"],
                       "CSS": [9000, "#663399"], "HTML": [6000, "#e34c26"], "Dockerfile": [1500, "#384d54"]}}
 
@@ -147,7 +148,6 @@ def render(d, theme="dark", get_icon=icon):
     year = days[-365:]
     year_total = sum(c for _, c in year)
     out = []
-    b = lambda n: f'<tspan class="num">{fmt(n)}</tspan>'  # cifra resaltada dentro de una frase
 
     # Cabecera: meta, nombre, presentación
     out.append(f'''
@@ -197,17 +197,36 @@ def render(d, theme="dark", get_icon=icon):
 <g clip-path="url(#sweep)">{"".join(cells)}</g>
 <rect class="head" x="{gx - 2}" y="{top - 6}" width="1.5" height="{gh + 10}"/>''')
 
-    # Los números, dichos en una frase
-    y = 506
-    lines = [
-        f'Este año: {b(d["commits"])} commits. En total, {b(d["prs"])} pull requests y {b(d["issues"])} issues.',
-        f'{b(d["repos"])} {plural(d["repos"], "repositorio público", "repositorios públicos")}, '
-        f'{b(d["stars"])} {plural(d["stars"], "estrella", "estrellas")} y {b(d["followers"])} {plural(d["followers"], "seguidor", "seguidores")}.',
-    ]
-    out += [f'<text x="{M}" y="{y + i * 32}" class="say">{s}</text>' for i, s in enumerate(lines)]
+    # Estadísticas: commits del año con su gráfica mensual, y el resto en una cuadrícula de 3×2
+    y, gap, bh = 512, 12, 180
+    out.append(f'<text x="{M}" y="{y - 14}" class="mono">Estadísticas</text>')
+    bw = 284
+    months_back = [((today.month - 1 - k) % 12 + 1, today.year - (k >= today.month)) for k in range(11, -1, -1)]  # (mes, año), del más viejo al actual
+    per_month = [sum(c for dd, c in year if dd[:7] == f"{yy}-{mm:02d}") for mm, yy in months_back]
+    pm_max = max(per_month) or 1
+    cx0, cw, chart_top, chart_base = M + 18, (bw - 36) / 12, y + 98, y + bh - 26
+    cols = []
+    for i, ((mm, _), v) in enumerate(zip(months_back, per_month)):
+        h = max(2, (chart_base - chart_top) * v / pm_max)
+        cols.append(f'<rect class="{"acc" if i == 11 else "bar"} col" style="animation-delay:{2.1 + i * .05:.2f}s" x="{cx0 + i * cw + 2:.1f}" y="{chart_base - h:.1f}" width="{cw - 5:.1f}" height="{h:.1f}" rx="2"/>'
+                    f'<text x="{cx0 + i * cw + cw / 2 - 1.5:.1f}" y="{chart_base + 14}" text-anchor="middle" class="mono small">{MONTHS[mm - 1][0]}</text>')
+    out.append(f'''<rect x="{M}" y="{y}" width="{bw}" height="{bh}" rx="12" class="tile"/>
+<text x="{M + 18}" y="{y + 28}" class="mono">Commits en {today.year}</text>
+<text x="{M + bw - 18}" y="{y + 76}" class="mono small" text-anchor="end">contribuciones por mes</text>
+<text x="{M + 16}" y="{y + 76}" class="big xl">{fmt(d["commits"])}</text>
+{"".join(cols)}''')
+    sx0 = M + bw + gap
+    sw, sh = (tw - bw - gap - 2 * gap) / 3, (bh - gap) / 2
+    small = [("Pull requests", d["prs"]), ("Issues", d["issues"]), ("Revisiones", d["reviews"]),
+             ("Repositorios", d["repos"]), ("Estrellas", d["stars"]), ("Seguidores", d["followers"])]
+    for i, (label, val) in enumerate(small):
+        x, ty = sx0 + (i % 3) * (sw + gap), y + (i // 3) * (sh + gap)
+        out.append(f'<rect x="{x:.1f}" y="{ty:.1f}" width="{sw:.1f}" height="{sh:.1f}" rx="12" class="tile"/>'
+                   f'<text x="{x + 16:.1f}" y="{ty + 26:.1f}" class="mono">{label}</text>'
+                   f'<text x="{x + 15:.1f}" y="{ty + 68:.1f}" class="big">{fmt(val)}</text>')
 
     # Racha: anillo (actual frente a la más larga) y los totales al lado
-    y = 600
+    y = 752
     r, rcx, rcy = 46, M + 50, y + 74
     circ = 2 * math.pi * r
     pct = cur / best if best else 0
@@ -237,7 +256,7 @@ def render(d, theme="dark", get_icon=icon):
                    f'<rect class="seg" style="animation-delay:{2.7 + i * .08:.2f}s" x="{lx}" y="{ry + 6}" width="{max(lw * p, 4):.1f}" height="4" rx="2" fill="{color}"/>')
 
     # Stack: iconos reales, sin animación; el hueco entre iconos se calcula para llegar justo al margen derecho
-    y, size, group_gap, n, x = 808, 30, 26, 0, M
+    y, size, group_gap, n, x = 960, 30, 26, 0, M
     count = sum(len(icons) for _, icons in STACK)
     gap = (tw - count * size - (len(STACK) - 1) * group_gap) / (count - len(STACK))
     for group, icons in STACK:
@@ -263,7 +282,9 @@ def render(d, theme="dark", get_icon=icon):
   .ink,.ink-t{{fill:{t["ink"]}}} .acc-t{{fill:{t["accent"]}}}
   .bar{{fill:{t["bar"]}}} .zero{{fill:{t["faint"]}}} .acc,.head{{fill:{t["accent"]}}}
   .track{{stroke:{t["faint"]}}} .ring{{stroke:{t["accent"]};animation:ring 1.6s cubic-bezier(.16,1,.3,1) 2.6s both}}
-  .big{{font:800 30px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}} .small{{font-size:9px}}
+  .big{{font:800 30px Bric,'Segoe UI',system-ui,sans-serif;fill:{t["ink"]}}} .small{{font-size:9px}} .xl{{font-size:44px}}
+  .tile{{fill:{t["tile"]};stroke:{t["edge"]}}}
+  .col{{transform-box:fill-box;transform-origin:bottom;animation:grow .9s cubic-bezier(.16,1,.3,1) both}}
   .up{{animation:up .9s cubic-bezier(.16,1,.3,1) both}}
   .fade{{animation:fade .8s ease-out both}}
   .sweep{{transform-box:fill-box;transform-origin:left;animation:sweep 1.8s cubic-bezier(.65,0,.35,1) .85s both}}
@@ -273,6 +294,7 @@ def render(d, theme="dark", get_icon=icon):
   @keyframes fade{{from{{opacity:0}}}}
   @keyframes ring{{from{{stroke-dashoffset:var(--c)}}}}
   @keyframes sweep{{from{{transform:scaleX(0)}}}}
+  @keyframes grow{{from{{transform:scaleY(0)}}}}
   @keyframes head{{0%{{opacity:1;transform:translateX(0)}}92%{{opacity:1}}100%{{opacity:0;transform:translateX({tw - 28}px)}}}}
   @media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}
 </style>
