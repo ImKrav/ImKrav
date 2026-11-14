@@ -18,7 +18,7 @@ INTRO = ("Estudio Ingeniería de Sistemas. Me interesa cómo se diseña el softw
 STACK = [  # (grupo, iconos de skillicons.dev), en una sola fila de margen a margen
     ("Código", ["js", "ts", "go", "python"]),
     ("Frameworks", ["nextjs", "angular", "nestjs", "django"]),
-    ("Datos", ["postgres", "mysql", "mongodb"]),
+    ("Datos", ["postgres", "redis", "mongodb"]),
     ("Infraestructura y herramientas", ["git", "jenkins", "docker", "dokploy", "aws", "azure", "gcp", "heroku", "vercel"]),
 ]
 MONTHS = "ene feb mar abr may jun jul ago sep oct nov dic".split()
